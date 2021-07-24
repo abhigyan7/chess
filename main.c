@@ -2,6 +2,9 @@
 
 int main()
 {
-	printf("random changes");
+    int sksk[3];
+printf("Enter");
+scanf("%d", sksk[]);
+
 	return 0;
 }
