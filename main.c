@@ -4,6 +4,7 @@ int main()
 {
     int sksk[3];
 printf("Enter");
-scanf("%d", sksk[])
+scanf("%d", sksk[]);
+
 	return 0;
 }
