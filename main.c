@@ -8,6 +8,7 @@ typedef char names[6];
 //matrix[0] contains unicode of black rook (i.e r in pieces string)
 names matrix[12]={"\u265C","\u265E","\u265D","\u265B","\u265A","\u265F","\u2656","\u2658","\u2657","\u2655","\u2654","\u2659"};
 
+
 //this function checks if a given character a is present in string b
 //if present returns the corresponding index of a
 //else returns 12
@@ -69,4 +70,5 @@ int main(){
     scanf("%s",str_of_pen);
 	display_board(str_of_pen);
 	return 0;
+
 }
