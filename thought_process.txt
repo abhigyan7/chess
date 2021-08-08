@@ -1,0 +1,12 @@
+Date: 2021-August-03
+    #topic : I am starting with move generation part
+        chessboard is named with 1,2,3...8 in vertical column and a,b...h in horizontal
+        and chess convention for moving (e.g. "a6" to "d4")
+        if we set "a": 1,"b":2,...,"h":8 in horizontal
+        and "1":7, "2":6, ..., "n":(8-n),,..,  "8":0 in vertical
+        we can say "a6" = 8 * ("6") + ("a"-1) 
+        in this way we can imply index 16 with string "a6"
+Date: 2021-August-04
+    #topic: printing board with game state
+    flag variable indicates the end of 8th index in 1dimensional board
+    

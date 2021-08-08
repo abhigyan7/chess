@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "board.h"
-
+#include "moves_generation.h"
 int main()
 {
     game_state state_1;
@@ -20,7 +20,10 @@ int main()
     printf("\n---------------\n");
     read_state(&state_1, test_fenstring_3);
     print_board(&state_1);
-
+    printf("\n");
+    move("a2","a4");
+    move("b2","b7");
+    
     return 0;
 
 }

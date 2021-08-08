@@ -26,8 +26,9 @@ struct game_state
      */
     int* squares;
     int turn;
+    int *king_movement; 
 };
-
+enum {stationary, moved};
 enum PIECES {
     W_ROOK, W_KNIGHT, W_BISHOP, W_KING, W_QUEEN, W_PAWN,
     B_ROOK, B_KNIGHT, B_BISHOP, B_KING, B_QUEEN, B_PAWN,
@@ -46,9 +47,9 @@ int board_starting_config[] = {
     W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,  W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,
     W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK
 };
-
+int king_status[] = {stationary, stationary};
 // use this when you need the starting state
-game_state starting_state = {board_starting_config, WHITE};
+game_state starting_state = {board_starting_config, WHITE, king_status};
 
 
 enum PLACES {
@@ -115,6 +116,21 @@ void print_board(const game_state* state)
         }
         printf("\n");
     }
+}
+/*to print with the game state->board*/
+void print_board_state(game_state *s){
+    int row =8; //row starts from 8 and goes on to 1
+    for(int i=0;i<64;i++){ //i will indicate if we have reached the 8th multiple
+        if(i%8==0){
+        printf("\n");
+        printf("%d ",row);
+        row--;
+        }
+    printf("%s ",chars_for_pieces[s->squares[i]]);
+    }
+    printf("\n");
+    printf("  a b c d e f g h\n");
+    
 }
 
 int read_state(game_state* state, char* fen_string)
