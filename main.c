@@ -21,8 +21,7 @@ int main()
     read_state(&state_1, test_fenstring_3);
     print_board(&state_1);
     printf("\n");
-    move("a2","a4");
-    move("b2","b7");
+    print_board_state(&starting_state);
     
     return 0;
 

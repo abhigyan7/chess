@@ -6,7 +6,27 @@ Date: 2021-August-03
         and "1":7, "2":6, ..., "n":(8-n),,..,  "8":0 in vertical
         we can say "a6" = 8 * ("6") + ("a"-1) 
         in this way we can imply index 16 with string "a6"
+
+
 Date: 2021-August-04
     #topic: printing board with game state
     flag variable indicates the end of 8th index in 1dimensional board
-    
+    when flagged it goes to newline with \n 
+    we also show the rank(on leftmost) since goes on decreasing as me move ahead with index
+    and also the  file in the end
+
+Date: 2021 August -08
+    #topic: castling and moving
+    we first check whether the from and to is a valid index of board then,
+        1. for moving to blank space we swap the position
+        2. for captures we check if there are pieces in from and to index and it should not be castling
+        3.if none of above then
+        first check if the move is castling
+        (i.e whether the from is king and to is rook,separately for white and black)
+        then
+            i. check whether king has moved in the kings_movement of gamestate
+            ii. check if the places between from and to is blank
+            iii. check if the rook to swap has moved in the rooks_movement of gamestate
+    NOTE : #######REMAININGS########
+    1. since we have castling property so after every move from starting we must 
+        update the kings_movement and rooks_movement to 1 if king moves or rooks move respectively 

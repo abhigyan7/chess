@@ -2,7 +2,7 @@
 #define BOARD_H_
 
 #include <stdio.h>
-
+typedef signed int vector[2];
 typedef struct game_state game_state;
 struct game_state
 {
@@ -16,7 +16,17 @@ struct game_state
      *        values from the enum PIECES
      *   2. turn
      *        an int, one of the values from the enum TURNS
-     *
+     *   3.kings_movement
+     *        stores binary state of whether at this point the king has been stationary or moved.
+     *        index 0 for WHITE 1 for BLACK following enum turn convention
+     *   4.rooks_movement
+     *        stores binary state of whether at this point the rooks has been stationary or moved.
+     *        index 0 for WHITE 1 for BLACK following enum turn convention
+     *        and second index indicates whether it is left(0th index) or right rook(1th index)
+     *   5.king vector
+     *        stores the vector to be added for king to change position while castling(0th for left) and (1st for right)
+     *   6.rook vector 
+     *        stores the vector to be added for rook to change position while castling(0th for left) and (1st for right)      
      * Things we might store in the future
      *   1. Check status
      *        Which kings are in check, which pieces check the opponent's king
@@ -26,9 +36,15 @@ struct game_state
      */
     int* squares;
     int turn;
-    int *king_movement; 
+    int kings_movement[2];
+    int rooks_movement[2][2];
+    vector king_vector;
+    vector rook_vector;
 };
-enum {stationary, moved};
+enum MOVEMENT {
+    STATIONARY, MOVED
+    };
+
 enum PIECES {
     W_ROOK, W_KNIGHT, W_BISHOP, W_KING, W_QUEEN, W_PAWN,
     B_ROOK, B_KNIGHT, B_BISHOP, B_KING, B_QUEEN, B_PAWN,
@@ -47,9 +63,9 @@ int board_starting_config[] = {
     W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,  W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,
     W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK
 };
-int king_status[] = {stationary, stationary};
+
 // use this when you need the starting state
-game_state starting_state = {board_starting_config, WHITE, king_status};
+game_state starting_state = {board_starting_config, WHITE,{STATIONARY, STATIONARY},{{STATIONARY, STATIONARY},{STATIONARY, STATIONARY}},{-2,2},{3,-2}};
 
 
 enum PLACES {
@@ -87,7 +103,7 @@ char* test_fenstring_3 = "r3kbnr/pp1Nppp1/n1p5/1B5p/3Pp3/2P5/PP3PPP/RNB1K2R w KQ
  * to print a black king
  */
 const char* chars_for_pieces[] = {
-    "\u2656", // white rook
+    "\u2656", // white rook 
     "\u2658", // white knight
     "\u2657", // white bishop
     "\u2654", // white king
