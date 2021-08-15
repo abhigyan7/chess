@@ -82,10 +82,10 @@ char* test_fenstring_3 = "r3kbnr/pp1Nppp1/n1p5/1B5p/3Pp3/2P5/PP3PPP/RNB1K2R w KQ
  * of how they handle unicode
  * The indeces for this array match with the values from
  * the pieces enum, so you can do
- *   printf("chars_for_pieces[B_KING]")
+ *   printf(chars_for_pieces[B_KING])
  * to print a black king
  */
-const char* chars_for_pieces[] = {
+const char* chars_for_pieces_univ[] = {
     "\u2656", // white rook
     "\u2658", // white knight
     "\u2657", // white bishop
@@ -99,6 +99,23 @@ const char* chars_for_pieces[] = {
     "\u265B", // black queen
     "\u265F", // black pawn
     "\u2000"  // a blank space
+};
+
+// same as above, but with ASCII characters
+const char* chars_for_pieces[] = {
+    "R", // white rook
+    "N", // white knight
+    "B", // white bishop
+    "K", // white king
+    "Q", // white queen
+    "P", // white pawn
+    "r", // black rook
+    "n", // black knight
+    "b", // black bishop
+    "k", // black king
+    "q", // black queen
+    "p", // black pawn
+    " "  // a blank space
 };
 
 void print_board(const game_state* state)
