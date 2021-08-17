@@ -30,3 +30,27 @@ Date: 2021 August -08
     NOTE : #######REMAININGS########
     1. since we have castling property so after every move from starting we must 
         update the kings_movement and rooks_movement to 1 if king moves or rooks move respectively 
+Date: 2021 August 14:
+    #topic related to Legal moves:
+    AIM: to generate all the legal moves for all pieces ignoring the check case
+
+    use of enum direction with corresponding vecs_for_knights,vecs_for_direction arrays
+
+    1.For sliding pieces:
+        the sliding pieces like bishop,queens,rooks move in similar way 
+        #Algorithm:
+            if we are able to generate the final place up to which these pieces can move for
+            all direction then all the squares can be covered that lie between the current
+            position and final position in all direction.
+            for eg bishop in e4(no other pieces):
+                lets say it can move 3 squares in right top ,4 in left top,and 3 in right bottom
+                and 4 in left bottom so total places possible =3+3+4+4= 14 squares
+    2.knights
+        knights are quite tricky bastards so we directly use the vecs for knights array to 
+        get the desired vectors to be added to get all possible directions(max of 8)
+    
+    3.pawns and kings 
+        we use the same vecs for pieces array to get the direct possible values for pawns and knights.
+        
+    
+            

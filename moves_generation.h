@@ -2,11 +2,13 @@
 #define MOVES_H_
 #include <stdio.h>
 #include "board.h"
+vector king_vector ={-2,2};
+vector rook_vector ={3,-2};
 //to check between the from and to whether the places are blank or not #for castling
-int check_blank(int from,int to){
+int check_blank(game_state *s,int from,int to){
     if(from>to){
         for(int i=to+1;i<from;i++){
-            if(starting_state.squares[i]!=BLANK){
+            if((*s).squares[i]!=BLANK){
                 printf("yes");
                 return 0;
                 break;
@@ -15,7 +17,7 @@ int check_blank(int from,int to){
     }
     else{
         for(int i=from+1;i<to;i++){
-            if(starting_state.squares[i]!=BLANK){
+            if((*s).squares[i]!=BLANK){
                 return 0;
                 break;
             }
@@ -29,14 +31,14 @@ int check_blank(int from,int to){
 
 
 /*checks if the move is castling or not*/
-int is_castling(game_state s,int from,int to){
-    if(s.turn){
-        if((s.squares[from]==B_KING) && (s.squares[to]==B_ROOK)){
+int is_castling(game_state *s,int from,int to){
+    if((*s).turn){
+        if(((*s).squares[from]==B_KING) && ((*s).squares[to]==B_ROOK)){
             return 1;
         }
     }
     else{
-        if((s.squares[from]==W_KING) && (s.squares[to]==W_ROOK)){
+        if(((*s).squares[from]==W_KING) && ((*s).squares[to]==W_ROOK)){
             return 1;
         }
     }
@@ -93,61 +95,63 @@ int str_to_boardindex(char *square){
 2.capturing a piece
 3.castling
 */
-void move(char *from,char *to){
+void move(game_state *s,char from[],char to[]){
     int from_index = str_to_boardindex(from);
     int to_index = str_to_boardindex(to);
     
-    if(from_index!=-1 && to_index!=-1 && (starting_state.squares[from_index]!= BLANK)){
-        int castling = is_castling(starting_state,from_index,to_index);
+    if(from_index!=-1 && to_index!=-1 && ((*s).squares[from_index]!= BLANK)){
+        int castling = is_castling(s,from_index,to_index);
         //moving a piece to blank
-        if(starting_state.squares[to_index]==BLANK){
+        if((*s).squares[to_index]==BLANK){
             printf("move %d to %d\n",from_index,to_index);
-            swap(&starting_state.squares[from_index],&starting_state.squares[to_index]);
-            printf("\nmove %d to %d\n",starting_state.squares[from_index],starting_state.squares[to_index]);
-            print_board_state(&starting_state);
-            starting_state.turn = !starting_state.turn;
+            swap(&(*s).squares[from_index],&(*s).squares[to_index]);
+            printf("\nmove %d to %d\n",(*s).squares[from_index],(*s).squares[to_index]);
+            print_board_state(s);
+            (*s).turn = !(*s).turn;
             
         }
         //captures
-        else if(starting_state.squares[to_index]!=BLANK && (!castling)){
-            starting_state.squares[to_index]= BLANK;
-            swap(&starting_state.squares[from_index],&starting_state.squares[to_index]);
-            printf("\ncapture %d x %d\n",starting_state.squares[from_index],starting_state.squares[to_index]);
+        else if((*s).squares[to_index]!=BLANK && (!castling)){
+            (*s).squares[to_index]= BLANK;
+            swap(&(*s).squares[from_index],&(*s).squares[to_index]);
+            printf("\ncapture %d x %d\n",(*s).squares[from_index],(*s).squares[to_index]);
             print_board_state(&starting_state);
-            starting_state.turn = !starting_state.turn;
+            (*s).turn = !(*s).turn;
         }
         //if not above cases castling is true
         else{
             if(castling){//still we make sure it's castling
-                if((!starting_state.kings_movement[starting_state.turn]) && (check_blank(from_index,to_index))){
+                if((!(*s).kings_movement[(*s).turn]) && (check_blank(s,from_index,to_index))){
                     int king_displace ;
                     int rook_displace;
                     int rook_index ;
                     switch(to_index){
-                        case 0|56:
+                        case 0:
+                        case 56:
                             rook_index =0;
                             break;
-                        case 7|63 :
+                        case 7:
+                        case 63 :
                             rook_index =1;
                             break;
                     }
-                    if(!starting_state.rooks_movement[starting_state.turn][rook_index]){
+                    if(!(*s).rooks_movement[(*s).turn][rook_index]){
                         printf("\n before castling \n");
-                        print_board_state(&starting_state);
-                        king_displace = from_index + starting_state.king_vector[rook_index];
-                        rook_displace = to_index + starting_state.rook_vector[rook_index];
+                        print_board_state(s);
+                        king_displace = from_index + king_vector[rook_index];
+                        rook_displace = to_index + rook_vector[rook_index];
                         printf("\ncastling \n");
-                        swap(&starting_state.squares[from_index],&starting_state.squares[king_displace]);
-                        swap(&starting_state.squares[to_index],&starting_state.squares[rook_displace]);
-                        print_board_state(&starting_state);
-                        starting_state.turn = !starting_state.turn;
+                        swap(&(*s).squares[from_index],&(*s).squares[king_displace]);
+                        swap(&(*s).squares[to_index],&(*s).squares[rook_displace]);
+                        print_board_state(s);
+                        (*s).turn = !(*s).turn;
                     }
                 }
 
             }
         }
         
-        printf("%d",starting_state.turn );
+        printf("Turn: %d.\n",(*s).turn );
     }
     
 }

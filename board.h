@@ -1,6 +1,6 @@
 #ifndef BOARD_H_
 #define BOARD_H_
-
+#include <stdint.h>
 #include <stdio.h>
 typedef signed int vector[2];
 typedef struct game_state game_state;
@@ -22,11 +22,7 @@ struct game_state
      *   4.rooks_movement
      *        stores binary state of whether at this point the rooks has been stationary or moved.
      *        index 0 for WHITE 1 for BLACK following enum turn convention
-     *        and second index indicates whether it is left(0th index) or right rook(1th index)
-     *   5.king vector
-     *        stores the vector to be added for king to change position while castling(0th for left) and (1st for right)
-     *   6.rook vector 
-     *        stores the vector to be added for rook to change position while castling(0th for left) and (1st for right)      
+     *        and second index indicates whether it is left(0th index) or right rook(1th index)     
      * Things we might store in the future
      *   1. Check status
      *        Which kings are in check, which pieces check the opponent's king
@@ -38,8 +34,6 @@ struct game_state
     int turn;
     int kings_movement[2];
     int rooks_movement[2][2];
-    vector king_vector;
-    vector rook_vector;
 };
 enum MOVEMENT {
     STATIONARY, MOVED
@@ -47,8 +41,7 @@ enum MOVEMENT {
 
 enum PIECES {
     W_ROOK, W_KNIGHT, W_BISHOP, W_KING, W_QUEEN, W_PAWN,
-    B_ROOK, B_KNIGHT, B_BISHOP, B_KING, B_QUEEN, B_PAWN,
-    BLANK
+    BLANK, B_ROOK=8, B_KNIGHT=9, B_BISHOP=10, B_KING=11, B_QUEEN=12, B_PAWN=13
 };
 
 enum TURNS {WHITE, BLACK};
@@ -65,7 +58,7 @@ int board_starting_config[] = {
 };
 
 // use this when you need the starting state
-game_state starting_state = {board_starting_config, WHITE,{STATIONARY, STATIONARY},{{STATIONARY, STATIONARY},{STATIONARY, STATIONARY}},{-2,2},{3,-2}};
+game_state starting_state = {board_starting_config, WHITE,{STATIONARY, STATIONARY},{{STATIONARY, STATIONARY},{STATIONARY, STATIONARY}}};
 
 
 enum PLACES {
@@ -110,13 +103,15 @@ const char* chars_for_pieces_univ[] = {
     "\u2654", // white king
     "\u2655", // white queen
     "\u2659", // white pawn
+    "\u2000", // a blank space
+    ".", // another blank space
     "\u265C", // black rook
     "\u265E", // black knight
     "\u265D", // black bishop
     "\u265A", // black king
     "\u265B", // black queen
     "\u265F", // black pawn
-    "\u2000"  // a blank space
+    
 };
 
 // same as above, but with ASCII characters
@@ -127,13 +122,15 @@ const char* chars_for_pieces[] = {
     "K", // white king
     "Q", // white queen
     "P", // white pawn
+    " ",  // a blank space
+    ".", // another blank space
     "r", // black rook
     "n", // black knight
     "b", // black bishop
     "k", // black king
     "q", // black queen
     "p", // black pawn
-    " "  // a blank space
+    
 };
 
 void print_board(const game_state* state)
@@ -218,7 +215,10 @@ int read_state(game_state* state, char* fen_string)
         board_index ++;
         }
     }
+
     return 1;
 }
+
+
 
 #endif // BOARD_H_
