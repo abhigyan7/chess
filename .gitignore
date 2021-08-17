@@ -58,6 +58,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-ra.c
+values.png
 
 
