@@ -95,7 +95,7 @@ int str_to_boardindex(char *square){
 2.capturing a piece
 3.castling
 */
-void move(game_state *s,char from[],char to[]){
+void move_from_strings(game_state *s,char from[],char to[]){
     int from_index = str_to_boardindex(from);
     int to_index = str_to_boardindex(to);
     

@@ -45,7 +45,7 @@ enum PIECES {
     BLANK, B_ROOK=8, B_KNIGHT=9, B_BISHOP=10, B_KING=11, B_QUEEN=12, B_PAWN=13
 };
 
-enum TURNS {WHITE, BLACK};
+enum TURNS {WHITE=0, BLACK=8};
 
 int board_starting_config[] = {
     B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK,
