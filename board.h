@@ -45,7 +45,7 @@ enum PIECES {
     BLANK, B_ROOK=8, B_KNIGHT=9, B_BISHOP=10, B_KING=11, B_QUEEN=12, B_PAWN=13
 };
 
-enum TURNS {WHITE=0, BLACK=8};
+enum TURNS {WHITE=0, BLACK=1};
 
 int board_starting_config[] = {
     B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK,
@@ -62,7 +62,7 @@ int get_player(int piece)
 {
     if (piece == BLANK)
         return -1;
-    return piece & 8;
+    return (piece & 8) != WHITE;
 }
 
 int are_two_pieces_same_player(int piece_1, int piece_2)
@@ -78,6 +78,11 @@ int are_two_pieces_different_player(int piece_1, int piece_2)
 int is_blank(int piece)
 {
     return piece == BLANK;
+}
+
+int get_opponent(int player)
+{
+    return 1 - player;
 }
 
 // use this when you need the starting state

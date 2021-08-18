@@ -59,9 +59,6 @@ int popcount(uint64_t in)
     return ret;
 }
 
-unsigned int v; // count the number of bits set in v
-unsigned int c; // c accumulates the total bits set in v
-
 int get_square_in_direction(int start_cell, int direction, int n){
     int start_cell_x = board_index_to_coord_x(start_cell);
     int start_cell_y = board_index_to_coord_y(start_cell);
@@ -150,53 +147,6 @@ uint64_t legal_move_rook(game_state *s,int index){
     return possible_moves;
 }
 
-//checks linear and diagonal on the basis of direction
-//blank spaces and  returns maximum possible square
-//int max_moves_sliding(game_state *s,int index,int direction){
-//    uint64_t sliding_moves = fill_legal_squares_in_direction(s, index, direction);
-//    int max=1;
-//    int new_position=get_square_in_direction(index,direction,max);
-//    //if black's turn
-//    if(s->turn){
-//        while(new_position!=-1){
-//            if(s->squares[new_position]&8==0 && s->squares[new_position]!=BLANK){
-//                break;
-//            }
-//            else if(s->squares[new_position]==BLANK){
-//                new_position=get_square_in_direction(index,direction,max);
-//                if(new_position!=-1){
-//                    max++;
-//                }
-//                continue;
-//            }
-//            else{
-//                max--;
-//                break;
-//            }
-//        }
-//        return max-1;
-//    }else{
-//        while(new_position!=-1){
-//            if(s->squares[new_position]&8==8){
-//                break;
-//            }
-//            else if(s->squares[new_position]==BLANK){
-//                new_position=get_square_in_direction(index,direction,max);
-//                if(new_position!=-1){
-//                    max++;
-//                }
-//
-//                continue;
-//            }
-//            else{
-//                max--;
-//                break;
-//            }
-//        }
-//    }
-//    return max-1;
-//}
-
 uint64_t legal_move_knight(game_state *s,int index){
     uint64_t possible_moves=0x0;
     int position;
@@ -216,52 +166,38 @@ uint64_t legal_move_knight(game_state *s,int index){
     return possible_moves;
 }
 
+int pawn_move_vectors   [] = { DIR_TOP, DIR_BOTTOM};
+int pawn_initial_ranks  [] = { 1, 6};
+int pawn_capture_vectors[][2] = { {DIR_TOP_LEFT, DIR_TOP_RIGHT}, {DIR_BOTTOM_LEFT, DIR_BOTTOM_RIGHT}};
 
 uint64_t legal_move_pawn(game_state *s,int index){
-    int *pos1= (int *)malloc(sizeof(int));
-    int *pos2= (int *)malloc(sizeof(int));
     uint64_t possible_moves=0x0;
     int position;
-    if(s->turn){
-        //black's one step down
-        position = get_square_in_direction(index,DIR_BOTTOM,1);
-        if(s->squares[position]==BLANK){
-            possible_moves= set_nth_bit_to(possible_moves, position,1);
-             //black 's first two steps down
-            if(index>=8 &&index<=15){
-                if(s->squares[index+16]==BLANK){
-                    possible_moves= set_nth_bit_to(possible_moves, index+16,1);
-                    
+    position = get_square_in_direction(index, pawn_move_vectors[s->turn], 1);
+    if (position != -1)
+        if (is_blank(s->squares[position]))
+        {
+            possible_moves |= set_nth_bit_to(possible_moves, position, 1);
+
+            position = get_square_in_direction(index, pawn_move_vectors[s->turn], 2);
+            if (position != -1)
+                if (is_blank(s->squares[position]) && board_index_to_coord_y(index) == pawn_initial_ranks[s->turn])
+                {
+                    possible_moves |= set_nth_bit_to(possible_moves, position, 1);
                 }
-            }
         }
-        //black's bottom left and bottom right
-        *pos1 = get_square_in_direction(index,DIR_BOTTOM_LEFT,1);
-        possible_moves = ((s->squares[*pos1])&8 ==8 ||s->squares[*pos1]==BLANK)? possible_moves:set_nth_bit_to(possible_moves, *pos1,1);
-        *pos2 = get_square_in_direction(index,DIR_BOTTOM_RIGHT,1);
-        possible_moves = ((s->squares[*pos2])&8 ==8 ||s->squares[*pos2]==BLANK)? possible_moves:set_nth_bit_to(possible_moves, *pos2,1);
-    }
-    else{
-        //white's one step up
-        position = get_square_in_direction(index,DIR_TOP,1);
-        if(s->squares[position]==BLANK){
-            possible_moves= set_nth_bit_to(possible_moves, position,1);
-             //white's first two steps up
-            if(index>=48 &&index<=55){
-                if(s->squares[index-16]==BLANK){
-                    possible_moves= set_nth_bit_to(possible_moves,index-16,1);
-                }
-                
-            }
+    for (int direction = 0; direction < 2; direction++)
+    {
+        position = get_square_in_direction(index, pawn_capture_vectors[s->turn][direction], 1);
+        if (position == -1)
+            continue;
+        if (is_blank(s->squares[position]))
+            continue;
+        if (are_two_pieces_different_player(s->squares[position], s->squares[index]))
+        {
+            possible_moves |= set_nth_bit_to(possible_moves, position, 1);
         }
-        //white's top left and top right
-        *pos1 = get_square_in_direction(index,DIR_TOP_LEFT,1);
-        possible_moves =((s->squares[*pos1]&8) < 8) ? possible_moves:set_nth_bit_to(possible_moves,*pos1,1);
-        *pos2 = get_square_in_direction(index,DIR_TOP_RIGHT,1);
-        possible_moves =((s->squares[*pos2]&8) < 8) ? possible_moves:set_nth_bit_to(possible_moves,*pos2,1);
     }
-    free(pos1);
-    free(pos2);    
     return possible_moves;
 }
 
@@ -401,38 +337,26 @@ uint64_t legal_moves(game_state *s,int index){
     if(s->squares[index]!=BLANK){
         switch(s->squares[index]){
             case W_ROOK:
-                possible_moves =legal_move_rook(s,index);
-                break;
-            case W_KNIGHT:
-                possible_moves =legal_move_knight(s,index);
-                break;
-            case W_BISHOP:
-                possible_moves =legal_move_bishop(s,index);
-                break;
-            case W_KING:
-                possible_moves =legal_move_king(s,index);
-                break;
-            case W_QUEEN:
-                possible_moves =legal_move_queen(s,index);
-                break;
-            case W_PAWN:
-                possible_moves =legal_move_pawn(s,index);
-                break;
             case B_ROOK:
                 possible_moves =legal_move_rook(s,index);
                 break;
+            case W_KNIGHT:
             case B_KNIGHT:
                 possible_moves =legal_move_knight(s,index);
                 break;
+            case W_BISHOP:
             case B_BISHOP:
                 possible_moves =legal_move_bishop(s,index);
                 break;
+            case W_KING:
             case B_KING:
                 possible_moves =legal_move_king(s,index);
                 break;
+            case W_QUEEN:
             case B_QUEEN:
                 possible_moves =legal_move_queen(s,index);
                 break;
+            case W_PAWN:
             case B_PAWN:
                 possible_moves =legal_move_pawn(s,index);
                 break;
@@ -440,8 +364,5 @@ uint64_t legal_moves(game_state *s,int index){
     }
     return possible_moves;
 }
-
-
-
 
 #endif

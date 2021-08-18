@@ -141,7 +141,7 @@ typedef struct {
 game_state make_move(game_state s, move m)
 {
     game_state ret;
-    ret.turn = 8-(s.turn);
+    ret.turn = get_opponent(s.turn);
     memcpy(ret.squares, s.squares, sizeof(s.squares));
     ret.squares[m.to] = s.squares[m.from];
     ret.squares[m.from] = BLANK;
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
                 {
                     m.from = pixel_coords_to_board_idx(mouse_x, mouse_y);
                     printf("tried to select square %d.\n", m.from);
-                    if (!((cur_state.squares[m.from] & 8) == cur_state.turn) || cur_state.squares[m.from] == BLANK)
+                    if (!(get_player(cur_state.squares[m.from]) == cur_state.turn) || cur_state.squares[m.from] == BLANK)
                         m.from = -1;
                     legal_movesss = legal_moves(&cur_state, m.from);
                     printf("Selected state %d.\n", m.from);
