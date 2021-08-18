@@ -2,8 +2,9 @@
 #define BOARD_H_
 #include <stdint.h>
 #include <stdio.h>
-typedef signed int vector[2];
+
 typedef struct game_state game_state;
+
 struct game_state
 {
     /*
@@ -30,14 +31,14 @@ struct game_state
      *        Which directions are available for castling for both players
      *   3. en passant status etc
      */
-    int* squares;
+    int squares[64];
     int turn;
     int kings_movement[2];
     int rooks_movement[2][2];
 };
 enum MOVEMENT {
     STATIONARY, MOVED
-    };
+};
 
 enum PIECES {
     W_ROOK, W_KNIGHT, W_BISHOP, W_KING, W_QUEEN, W_PAWN,
@@ -58,7 +59,24 @@ int board_starting_config[] = {
 };
 
 // use this when you need the starting state
-game_state starting_state = {board_starting_config, WHITE,{STATIONARY, STATIONARY},{{STATIONARY, STATIONARY},{STATIONARY, STATIONARY}}};
+const game_state starting_state = {
+    {
+        B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK,
+        B_PAWN, B_PAWN,   B_PAWN,   B_PAWN,  B_PAWN, B_PAWN,   B_PAWN,   B_PAWN,
+        BLANK,  BLANK,    BLANK,    BLANK,   BLANK,  BLANK,    BLANK,    BLANK,
+        BLANK,  BLANK,    BLANK,    BLANK,   BLANK,  BLANK,    BLANK,    BLANK,
+        BLANK,  BLANK,    BLANK,    BLANK,   BLANK,  BLANK,    BLANK,    BLANK,
+        BLANK,  BLANK,    BLANK,    BLANK,   BLANK,  BLANK,    BLANK,    BLANK,
+        W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,  W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,
+        W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK
+    },
+    WHITE,
+    {STATIONARY, STATIONARY},
+    {
+        {STATIONARY, STATIONARY},
+        {STATIONARY, STATIONARY}
+    }
+};
 
 
 enum PLACES {
