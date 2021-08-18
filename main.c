@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <SDL2/SDL.h>
+#include "SDL2/SDL.h"
 #include <SDL2/SDL_image.h>
 
 #include "board.h"
@@ -150,14 +150,9 @@ game_state make_move(game_state s, move m)
 
 void cleanup()
 {
-    //SDL_FreeSurface();
-    //image = NULL;
-
     SDL_DestroyWindow(window);
     window = NULL;
-
     IMG_Quit();
-
     SDL_Quit();
 }
 
@@ -183,6 +178,7 @@ int main(int argc, char *argv[])
 
     move m = {-1, -1};
     int stop_main_loop = 0;
+    uint64_t legal_movesss;
     while (!stop_main_loop)
     {
         while (SDL_PollEvent(&event))
@@ -197,9 +193,9 @@ int main(int argc, char *argv[])
                 {
                     m.from = pixel_coords_to_board_idx(mouse_x, mouse_y);
                     printf("tried to select square %d.\n", m.from);
-                    printf("%d, %d\n", cur_state.squares[m.from], cur_state.turn);
                     if (!((cur_state.squares[m.from] & 8) == cur_state.turn) || cur_state.squares[m.from] == BLANK)
                         m.from = -1;
+                    legal_movesss = legal_moves(&cur_state, m.from);
                     printf("Selected state %d.\n", m.from);
                 } else if (m.to == -1) {
                     m.to = pixel_coords_to_board_idx(mouse_x, mouse_y);
@@ -220,6 +216,14 @@ int main(int argc, char *argv[])
         {
             rect = board_idx_to_square_rect(m.from);
             SDL_RenderCopy(renderer, texture_selected_square, NULL, &rect);
+            for (int z = 0; z < 64; z++)
+            {
+                if (get_nth_bit(legal_movesss, z))
+                {
+                    rect = board_idx_to_square_rect(z);
+                    SDL_RenderCopy(renderer, texture_selected_square, NULL, &rect);
+                }
+            }
         }
         for (int i = 0; i < 64; i++)
         {

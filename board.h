@@ -58,6 +58,28 @@ int board_starting_config[] = {
     W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK
 };
 
+int get_player(int piece)
+{
+    if (piece == BLANK)
+        return -1;
+    return piece & 8;
+}
+
+int are_two_pieces_same_player(int piece_1, int piece_2)
+{
+    return (get_player(piece_1) == get_player(piece_2));
+}
+
+int are_two_pieces_different_player(int piece_1, int piece_2)
+{
+    return (get_player(piece_1) != get_player(piece_2));
+}
+
+int is_blank(int piece)
+{
+    return piece == BLANK;
+}
+
 // use this when you need the starting state
 const game_state starting_state = {
     {

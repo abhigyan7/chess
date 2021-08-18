@@ -39,6 +39,18 @@ int coord_xy_to_board_index(int x, int y){
     return (7-y)*8+x;
 }
 
+void print_moves(uint64_t moves)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        for (int j = 0; j < 8; j++)
+        {
+            printf("%d", get_nth_bit(moves, i*8+j));
+        }
+        printf("\n");
+    }
+}
+
 int get_square_in_direction(int start_cell, int direction, int n){
     int start_cell_x = board_index_to_coord_x(start_cell);
     int start_cell_y = board_index_to_coord_y(start_cell);
@@ -72,112 +84,57 @@ int neighbor_empty(game_state *s,int index,int direction){
     }
     return 0;
 }
+
+uint64_t fill_legal_squares_in_direction(game_state *s, int direction, int index)
+{
+    uint64_t ret = 0;
+    int n = 1;
+    while (1) {
+        int position = get_square_in_direction(index, direction, n);
+        n++;
+        if (position == -1)
+            break;
+        else if (are_two_pieces_same_player(s->squares[position], s->squares[index]))
+            break;
+        else if (is_blank(s->squares[position]))
+            ret = set_nth_bit_to(ret, position, 1);
+        else if (are_two_pieces_different_player(s->squares[position], s->squares[index]))
+        {
+            ret = set_nth_bit_to(ret, position, 1);
+            break;
+        }
+    }
+    return ret;
+}
+
 //this function gives a 64 bit number where in each bit 1:it can move 0:it can't go for queen
 uint64_t legal_move_queen(game_state *s,int index){
     uint64_t possible_moves=0x0;
-    if(s->turn){//if black's turn
-        for(int dir =DIR_TOP;dir<=DIR_BOTTOM_RIGHT;dir++){
-            int max=1;
-            int position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position]==BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-                max++;
-                position =get_square_in_direction(index,dir,max);
-            }
-
-            if(position!=-1 && (s->squares[position]&8)==0 && s->squares[position]!=BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-            }
-        }
-        
-    }
-    else{
-        for(int dir =DIR_TOP;dir<=DIR_BOTTOM_RIGHT;dir++){
-            int max=1;
-            int position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position]==BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-                max++;
-                position =get_square_in_direction(index,dir,max);
-            }
-            
-            if(position!=-1 && (s->squares[position]&8)==8){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-            }
-        }
+    for (int dir = DIR_TOP; dir <= DIR_BOTTOM_RIGHT; dir++)
+    {
+        uint64_t ret = fill_legal_squares_in_direction(s, dir, index);
+        possible_moves = ret | possible_moves;
     }
     return possible_moves;
 }
 
-//LEGAL BISHOP
-//this function gives a 64 bit number where in each bit 1:it can move 0:it can't go for BISHOP
+
 uint64_t legal_move_bishop(game_state *s,int index){
     uint64_t possible_moves=0x0;
-    if(s->turn){//if black's turn
-        for(int dir =DIR_TOP_LEFT;dir<=DIR_BOTTOM_RIGHT;dir++){
-            int max=1;
-            int position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position]==BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-                max++;
-                position =get_square_in_direction(index,dir,max);
-            }
-            if(position!=-1 && (s->squares[position]&8)==0 && s->squares[position]!=BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-            }
-        }
-        
-    }
-    else{
-        for(int dir =DIR_TOP_LEFT;dir<=DIR_BOTTOM_RIGHT;dir++){
-            int max=1;
-            int position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position]==BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-                max++;
-                position =get_square_in_direction(index,dir,max);
-            }
-            
-            if(position!=-1 && (s->squares[position]&8)==8){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-            }
-        }
+    for (int dir = DIR_TOP_LEFT; dir <= DIR_BOTTOM_RIGHT; dir++)
+    {
+        uint64_t ret = fill_legal_squares_in_direction(s, dir, index);
+        possible_moves = ret | possible_moves;
     }
     return possible_moves;
 }
-//this function gives a 64 bit number where in each bit 1:it can move 0:it can't go for 
-//legal rook
+
 uint64_t legal_move_rook(game_state *s,int index){
     uint64_t possible_moves=0x0;
-    if(s->turn){//if black's turn
-        for(int dir =DIR_TOP;dir<=DIR_RIGHT;dir++){
-            int max=1;
-            int position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position]==BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-                max++;
-                position =get_square_in_direction(index,dir,max);
-            }
-            if(position!=-1 && (s->squares[position]&8)==0 && s->squares[position]!=BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-            }
-        }
-        
-    }
-    else{
-        for(int dir =DIR_TOP;dir<=DIR_RIGHT;dir++){
-            int max=1;
-            int position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position]==BLANK){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-                max++;
-                position =get_square_in_direction(index,dir,max);
-            }
-            
-            if(position!=-1 && (s->squares[position]&8)==8){
-                possible_moves =set_nth_bit_to(possible_moves, position,1);
-            }
-        }
+    for (int dir = DIR_TOP; dir <= DIR_RIGHT; dir++)
+    {
+        uint64_t ret = fill_legal_squares_in_direction(s, dir, index);
+        possible_moves = ret | possible_moves;
     }
     return possible_moves;
 }
