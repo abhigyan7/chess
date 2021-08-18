@@ -4,10 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "board.h"
-// int count(uint64_t number){
-//     int count=1;
-//     return count;
-// }
+
 uint64_t set_nth_bit_to(uint64_t integer, int n, int val)
 {
     integer ^= (-val ^ integer) & (1UL << n);
@@ -51,6 +48,20 @@ void print_moves(uint64_t moves)
     }
 }
 
+int popcount(uint64_t in)
+{
+    int ret;
+
+    for (ret = 0; in; ret++)
+    {
+      in = in - 1; // clear the least significant bit set
+    }
+    return ret;
+}
+
+unsigned int v; // count the number of bits set in v
+unsigned int c; // c accumulates the total bits set in v
+
 int get_square_in_direction(int start_cell, int direction, int n){
     int start_cell_x = board_index_to_coord_x(start_cell);
     int start_cell_y = board_index_to_coord_y(start_cell);
@@ -64,12 +75,12 @@ int get_square_in_direction(int start_cell, int direction, int n){
     return coord_xy_to_board_index(dest_cell_x, dest_cell_y);
 }
 
-int get_knightsquare_in_direction(int start_cell, int direction){
+int get_square_for_knight_vector(int start_cell, int knight_vector){
     int start_cell_x = board_index_to_coord_x(start_cell);
     int start_cell_y = board_index_to_coord_y(start_cell);
 
-    int dest_cell_x = start_cell_x+ vecs_for_knight[direction][0];
-    int dest_cell_y = start_cell_y+vecs_for_knight[direction][1];
+    int dest_cell_x = start_cell_x+ vecs_for_knight[knight_vector][0];
+    int dest_cell_y = start_cell_y+ vecs_for_knight[knight_vector][1];
 
     if (dest_cell_x > 7 || dest_cell_x < 0 || dest_cell_y < 0 || dest_cell_y > 7)
         return -1;
@@ -141,75 +152,69 @@ uint64_t legal_move_rook(game_state *s,int index){
 
 //checks linear and diagonal on the basis of direction
 //blank spaces and  returns maximum possible square
-int max_moves_sliding(game_state *s,int index,int direction){
-    int max=1;
-    int new_position=get_square_in_direction(index,direction,max);
-    //if black's turn
-    if(s->turn){
-        while(new_position!=-1){
-            if(s->squares[new_position]&8==0 && s->squares[new_position]!=BLANK){
-                break;
-            }
-            else if(s->squares[new_position]==BLANK){
-                new_position=get_square_in_direction(index,direction,max);
-                if(new_position!=-1){
-                    max++;
-                }
-                continue;
-            }
-            else{
-                max--;
-                break;
-            }
-        }
-        return max-1;
-    }else{
-        while(new_position!=-1){
-            if(s->squares[new_position]&8==8){
-                break;
-            }
-            else if(s->squares[new_position]==BLANK){
-                new_position=get_square_in_direction(index,direction,max);
-                if(new_position!=-1){
-                    max++;
-                }
-                
-                continue;
-            }
-            else{
-                max--;
-                break;
-            }  
-        }
-    }
-    return max-1;
-}
-//DIR_TOP_LEFT, DIR_TOP_RIGHT, DIR_BOTTOM_LEFT, DIR_BOTTOM_RIGHT
+//int max_moves_sliding(game_state *s,int index,int direction){
+//    uint64_t sliding_moves = fill_legal_squares_in_direction(s, index, direction);
+//    int max=1;
+//    int new_position=get_square_in_direction(index,direction,max);
+//    //if black's turn
+//    if(s->turn){
+//        while(new_position!=-1){
+//            if(s->squares[new_position]&8==0 && s->squares[new_position]!=BLANK){
+//                break;
+//            }
+//            else if(s->squares[new_position]==BLANK){
+//                new_position=get_square_in_direction(index,direction,max);
+//                if(new_position!=-1){
+//                    max++;
+//                }
+//                continue;
+//            }
+//            else{
+//                max--;
+//                break;
+//            }
+//        }
+//        return max-1;
+//    }else{
+//        while(new_position!=-1){
+//            if(s->squares[new_position]&8==8){
+//                break;
+//            }
+//            else if(s->squares[new_position]==BLANK){
+//                new_position=get_square_in_direction(index,direction,max);
+//                if(new_position!=-1){
+//                    max++;
+//                }
+//
+//                continue;
+//            }
+//            else{
+//                max--;
+//                break;
+//            }
+//        }
+//    }
+//    return max-1;
+//}
+
 uint64_t legal_move_knight(game_state *s,int index){
     uint64_t possible_moves=0x0;
     int position;
-    int index_x = board_index_to_coord_x(index);
-    int index_y = board_index_to_coord_y(index);
-    if(s->turn){
-        for(int i=0;i<8;i++){
-            position= get_knightsquare_in_direction(index,i);
-            if(position!=-1){
-                possible_moves =(s->squares[position]&8==8 ||s->squares[position]==BLANK)? set_nth_bit_to(possible_moves, position,1):possible_moves;
-            }
+    for(int knight_vector = 0; knight_vector < 8; knight_vector++){
+        position= get_square_for_knight_vector(index, knight_vector);
+        if (position == -1)
+            continue;
+        if (are_two_pieces_same_player(s->squares[position], s->squares[index]))
+            continue;
+        if (is_blank(s->squares[position]))
+        {
+            possible_moves |= set_nth_bit_to(possible_moves, position, 1);
         }
-    }
-    else{
-        for(int i=0;i<8;i++){
-            position= get_knightsquare_in_direction(index,i);
-            if(position!=-1){
-                possible_moves =(s->squares[position]&8==8)? possible_moves:set_nth_bit_to(possible_moves, position,1);
-            }
+        if (are_two_pieces_different_player(s->squares[position], s->squares[index]))
+            possible_moves |= set_nth_bit_to(possible_moves, position, 1);
         }
-        
-    }
     return possible_moves;
 }
-
 
 
 uint64_t legal_move_pawn(game_state *s,int index){
@@ -265,7 +270,14 @@ uint64_t legal_move_king(game_state *s,int index){
     int position;
     for(int dir =0;dir<8;dir++){
         position =get_square_in_direction(index,dir,1);
-        possible_moves = ((position!=-1)&&(s->squares[position]==BLANK))? set_nth_bit_to(possible_moves, position,1):possible_moves;
+        if (position == -1)
+            continue;
+        if (are_two_pieces_same_player(s->squares[index], s->squares[position]))
+            continue;
+        if (is_blank(s->squares[position]))
+            possible_moves |= set_nth_bit_to(possible_moves, position, 1);
+        else if (are_two_pieces_different_player(s->squares[index], s->squares[position]))
+            possible_moves |= set_nth_bit_to(possible_moves, position, 1);
     }
     return possible_moves;
 }
@@ -348,7 +360,7 @@ uint64_t king_in_check(game_state *s,int king_index){
     if(s->turn){
         //check l-SHAPE FOR KNIGHT
         for(int i=0;i<8;i++){
-            position = get_knightsquare_in_direction(king_index,i);
+            position = get_square_for_knight_vector(king_index,i);
             if(position!=-1){
                 flag = (s->squares[position]==W_KNIGHT)?set_nth_bit_to(flag, position,1):flag;
             }
@@ -366,7 +378,7 @@ uint64_t king_in_check(game_state *s,int king_index){
     else{
         //check l
         for(int i=0;i<8;i++){
-            position = get_knightsquare_in_direction(king_index,i);
+            position = get_square_for_knight_vector(king_index,i);
             if(position!=-1){
                 flag = (s->squares[position]==B_KNIGHT)?set_nth_bit_to(flag, position,1):flag;
             }
