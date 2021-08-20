@@ -7,7 +7,7 @@
 
 uint64_t set_nth_bit_to(uint64_t integer, int n, int val)
 {
-    integer ^= (-val ^ integer) & (1UL << n);
+    integer ^= (-val ^ integer) & (1ULL << n);
     return integer;
 }
 
