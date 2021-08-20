@@ -54,7 +54,7 @@ int popcount(uint64_t in)
 
     for (ret = 0; in; ret++)
     {
-      in = in - 1; // clear the least significant bit set
+      in &= in - 1; // clear the least significant bit set
     }
     return ret;
 }
@@ -218,118 +218,156 @@ uint64_t legal_move_king(game_state *s,int index){
     return possible_moves;
 }
 
-//find opposite color queen or bishop or rook in the range
-//the color is of king that is to be checked of checks from sliding pieces
-uint64_t king_check_sliding(game_state *s,int index){
-    int position;
-    uint64_t possible_checks=0x0; 
-    int max;
-    if(s->turn){
-        //checking top bottom left right
-        for(int dir=0;dir<4;dir++){
-            max=1;
-            position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position] ==BLANK){
-                max++;
-                position =get_square_in_direction(index,dir,max);
-                if(position!=-1 &&(s->squares[position]==W_QUEEN ||s->squares[position]==W_ROOK)){
-                    possible_checks = set_nth_bit_to(possible_checks, position,1);
-                    break;
-                }
-            }
-            
-        }
-        //checking DIR_TOP_LEFT, DIR_TOP_RIGHT, DIR_BOTTOM_LEFT, DIR_BOTTOM_RIGHT
-        for(int dir=4;dir<8;dir++){
-            max=1;
-            position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position] ==BLANK){
-                max++;
-                position =get_square_in_direction(index,dir,max);
-                if(position!=-1 &&(s->squares[position]==W_QUEEN ||s->squares[position]==W_BISHOP)){
-                    possible_checks = set_nth_bit_to(possible_checks, position,1);
-                    break;
-                }
-            }
-            
-        }
-    }
-    else{//checking for white king
-        //checking top bottom left right
-        for(int dir=0;dir<4;dir++){
-            max=1;
-            position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position] ==BLANK){
-                max++;
-                position =get_square_in_direction(index,dir,max);
-                if(position!=-1 &&(s->squares[position]==B_QUEEN ||s->squares[position]==B_ROOK)){
-                    possible_checks = set_nth_bit_to(possible_checks, position,1);
-                    break;
-                }
-            }
-            
-        }
-        //checking DIR_TOP_LEFT, DIR_TOP_RIGHT, DIR_BOTTOM_LEFT, DIR_BOTTOM_RIGHT
-        for(int dir=4;dir<8;dir++){
-            max=1;
-            position =get_square_in_direction(index,dir,max);
-            while(position!=-1 && s->squares[position] ==BLANK){
-                max++;
-                position =get_square_in_direction(index,dir,max);
-                if(position!=-1 &&(s->squares[position]==B_QUEEN ||s->squares[position]==B_BISHOP)){
-                    possible_checks = set_nth_bit_to(possible_checks, position,1);
-                    break;
-                }
-            }
-            
-        }
-    }
-    
-    return possible_checks;
+int is_knight(int p)
+{
+    return (p == B_KNIGHT || p == W_KNIGHT);
 }
 
-uint64_t king_in_check(game_state *s,int king_index){
-    int position;
-    uint64_t flag=0x0;
-    uint64_t flag_sliding=0x0;
-    //FIRST CHECKING FOR BLACK KING
-    if(s->turn){
-        //check l-SHAPE FOR KNIGHT
-        for(int i=0;i<8;i++){
-            position = get_square_for_knight_vector(king_index,i);
-            if(position!=-1){
-                flag = (s->squares[position]==W_KNIGHT)?set_nth_bit_to(flag, position,1):flag;
-            }
-        }
-        //check 1 step left bottom and right bottom diagnols for white pawns
-        for(int i=6;i<=7;i++){
-            position =get_square_in_direction(king_index,i,1);
-            if(position!=-1){
-                flag = (s->squares[position]==W_PAWN)? set_nth_bit_to(flag, position,1):flag;
-            }
-        }
-        flag_sliding =king_check_sliding(s,king_index);
-        flag =flag|flag_sliding;
+int is_rook(int p)
+{
+    return (p == B_ROOK || p == W_ROOK);
+}
+
+int is_bishop(int p)
+{
+    return (p == B_BISHOP || p == W_BISHOP);
+}
+
+int is_king(int p)
+{
+    return (p == B_KING || p == W_KING);
+}
+
+int is_queen(int p)
+{
+    return (p == B_QUEEN || p == W_QUEEN);
+}
+
+int is_pawn(int p)
+{
+    return (p == B_PAWN || p == W_PAWN);
+}
+
+int get_square_at_end_of_direction(game_state *s, int direction, int index)
+{
+    int n = 1;
+    int ret;
+    do {
+        ret = get_square_in_direction(index, direction, n);
+        n++;
+    } while (ret != -1 && is_blank(s->squares[ret]));
+    return ret;
+}
+
+int is_king_in_check(game_state *s, int king_index)
+{
+    int player = get_player(s->squares[king_index]);
+
+    int nearest_piece_in_direction, idx;
+
+    for (int dir = DIR_TOP; dir <= DIR_RIGHT; dir++)
+    {
+        nearest_piece_in_direction = get_square_at_end_of_direction(s, dir, king_index);
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_queen(nearest_piece_in_direction) || is_rook(nearest_piece_in_direction))
+            return 1;
     }
-    else{
-        //check l
-        for(int i=0;i<8;i++){
-            position = get_square_for_knight_vector(king_index,i);
-            if(position!=-1){
-                flag = (s->squares[position]==B_KNIGHT)?set_nth_bit_to(flag, position,1):flag;
-            }
-        }
-        //check 1 step left top and right top diagnols for white pawns
-        for(int i=4;i<=5;i++){
-            position =get_square_in_direction(king_index,i,1);
-            if(position!=-1){
-                flag = (s->squares[position]==B_PAWN)? set_nth_bit_to(flag, position,1):flag;
-            }
-        }
-        flag_sliding =king_check_sliding(s,king_index);
-        flag =flag|flag_sliding;
+
+    for (int dir = DIR_TOP_LEFT; dir <= DIR_BOTTOM_RIGHT; dir++)
+    {
+        nearest_piece_in_direction = get_square_at_end_of_direction(s, dir, king_index);
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_queen(nearest_piece_in_direction) || is_bishop(nearest_piece_in_direction))
+            return 1;
     }
-    return flag;
+
+    for (int vec = 0; vec < 8; vec++)
+    {
+        idx = get_square_for_knight_vector(king_index, vec);
+        nearest_piece_in_direction = s->squares[idx];
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_knight(nearest_piece_in_direction))
+            return 1;
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        idx = get_square_in_direction(king_index, pawn_capture_vectors[player == BLACK][i], 1);
+        nearest_piece_in_direction = s->squares[idx];
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_knight(nearest_piece_in_direction))
+            return 1;
+    }
+
+    return 0;
+}
+
+uint64_t which_pieces_threathen_king(game_state *s, int king_index)
+{
+    int player = get_player(s->squares[king_index]);
+
+    uint64_t ret = 0;
+
+    int nearest_piece_in_direction, idx;
+
+    for (int dir = DIR_TOP; dir <= DIR_RIGHT; dir++)
+    {
+        nearest_piece_in_direction = get_square_at_end_of_direction(s, dir, king_index);
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_queen(nearest_piece_in_direction) || is_rook(nearest_piece_in_direction))
+            ret = ret | set_nth_bit_to(ret, nearest_piece_in_direction, 1);
+    }
+
+    for (int dir = DIR_TOP_LEFT; dir <= DIR_BOTTOM_RIGHT; dir++)
+    {
+        nearest_piece_in_direction = get_square_at_end_of_direction(s, dir, king_index);
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_queen(nearest_piece_in_direction) || is_bishop(nearest_piece_in_direction))
+            ret = ret | set_nth_bit_to(ret, nearest_piece_in_direction, 1);
+    }
+
+    for (int vec = 0; vec < 8; vec++)
+    {
+        idx = get_square_for_knight_vector(king_index, vec);
+        nearest_piece_in_direction = s->squares[idx];
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_knight(nearest_piece_in_direction))
+            ret = ret | set_nth_bit_to(ret, nearest_piece_in_direction, 1);
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        idx = get_square_in_direction(king_index, pawn_capture_vectors[player == BLACK][i], 1);
+        nearest_piece_in_direction = s->squares[idx];
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_knight(nearest_piece_in_direction))
+            ret = ret | set_nth_bit_to(ret, nearest_piece_in_direction, 1);
+    }
+    return ret;
 }
 
 uint64_t legal_moves(game_state *s,int index){
