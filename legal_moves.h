@@ -252,10 +252,15 @@ int get_square_at_end_of_direction(game_state *s, int direction, int index)
 {
     int n = 1;
     int ret;
-    do {
+    while (1)
+    {
         ret = get_square_in_direction(index, direction, n);
+        if (ret == -1)
+            break;
+        if (!is_blank(s->squares[ret]))
+            break;
         n++;
-    } while (ret != -1 && is_blank(s->squares[ret]));
+    }
     return ret;
 }
 
@@ -267,7 +272,10 @@ int is_king_in_check(game_state *s, int king_index)
 
     for (int dir = DIR_TOP; dir <= DIR_RIGHT; dir++)
     {
-        nearest_piece_in_direction = get_square_at_end_of_direction(s, dir, king_index);
+        idx = get_square_at_end_of_direction(s, dir, king_index);
+        if (idx == -1)
+            continue;
+        nearest_piece_in_direction = s->squares[idx];
         if (nearest_piece_in_direction == BLANK)
             continue;
         if (get_player(nearest_piece_in_direction) == player)
@@ -278,7 +286,10 @@ int is_king_in_check(game_state *s, int king_index)
 
     for (int dir = DIR_TOP_LEFT; dir <= DIR_BOTTOM_RIGHT; dir++)
     {
-        nearest_piece_in_direction = get_square_at_end_of_direction(s, dir, king_index);
+        idx = get_square_at_end_of_direction(s, dir, king_index);
+        if (idx == -1)
+            continue;
+        nearest_piece_in_direction = s->squares[idx];
         if (nearest_piece_in_direction == BLANK)
             continue;
         if (get_player(nearest_piece_in_direction) == player)
@@ -290,6 +301,8 @@ int is_king_in_check(game_state *s, int king_index)
     for (int vec = 0; vec < 8; vec++)
     {
         idx = get_square_for_knight_vector(king_index, vec);
+        if (idx == -1)
+            continue;
         nearest_piece_in_direction = s->squares[idx];
         if (nearest_piece_in_direction == BLANK)
             continue;
@@ -302,15 +315,16 @@ int is_king_in_check(game_state *s, int king_index)
     for (int i = 0; i < 2; i++)
     {
         idx = get_square_in_direction(king_index, pawn_capture_vectors[player == BLACK][i], 1);
+        if (idx == -1)
+            continue;
         nearest_piece_in_direction = s->squares[idx];
         if (nearest_piece_in_direction == BLANK)
             continue;
         if (get_player(nearest_piece_in_direction) == player)
             continue;
-        if (is_knight(nearest_piece_in_direction))
+        if (is_pawn(nearest_piece_in_direction))
             return 1;
     }
-
     return 0;
 }
 
@@ -370,6 +384,54 @@ uint64_t which_pieces_threathen_king(game_state *s, int king_index)
     return ret;
 }
 
+game_state make_move_ints(game_state s, int from, int to)
+{
+    game_state ret = s;
+    ret.turn = get_opponent(s.turn);
+    ret.squares[to] = s.squares[from];
+    ret.squares[from] = BLANK;
+    return ret;
+}
+
+int find_piece(game_state* s, int piece)
+{
+    int index = -1;
+    for (int i = 0; i < 64; i++)
+    {
+        if (s->squares[i] == piece)
+        {
+            index = i;
+            break;
+        }
+
+    }
+    return index;
+}
+
+uint64_t ensure_moves_are_legal(game_state* s, int index, uint64_t moves)
+{
+    // make sure none of the moves cause the player's own king
+    // to be in check
+    uint64_t ret = moves;
+
+    int king_index = -1;
+    int king_we_re_searching_for = (s->turn==BLACK)? B_KING: W_KING;
+    king_index = find_piece(s, king_we_re_searching_for);
+
+    for (int j = 0; j < 64; j++)
+    {
+        if (get_nth_bit(moves, j) == 1)
+        {
+            game_state new_state = make_move_ints(*s, index, j);
+            if (is_king_in_check(&new_state, king_index))
+            {
+                ret = set_nth_bit_to(ret, j, 0);
+            }
+        }
+    }
+    return ret;
+}
+
 uint64_t legal_moves(game_state *s,int index){
     uint64_t possible_moves =0x0;
     if(s->squares[index]!=BLANK){
@@ -400,7 +462,8 @@ uint64_t legal_moves(game_state *s,int index){
                 break;
         }
     }
-    return possible_moves;
+    //return possible_moves;
+    return ensure_moves_are_legal(s, index, possible_moves);
 }
 
 #endif

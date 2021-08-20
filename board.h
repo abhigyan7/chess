@@ -261,6 +261,11 @@ int read_state(game_state* state, char* fen_string)
         }
     }
 
+    string_index++;
+    token = fen_string[string_index];
+    printf("Token: %c\n", token);
+    state->turn = (token=='w')? WHITE: BLACK;
+    printf("%d\n", state->turn);
     return 1;
 }
 
