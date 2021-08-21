@@ -342,6 +342,20 @@ int is_king_in_check(game_state *s, int king_index)
         if (is_pawn(nearest_piece_in_direction))
             return 1;
     }
+
+    for (int i = DIR_TOP; i <= DIR_BOTTOM_RIGHT; i++)
+    {
+        idx = get_square_in_direction(king_index, i, 1);
+        if (idx == -1)
+            continue;
+        nearest_piece_in_direction = s->squares[idx];
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_king(nearest_piece_in_direction))
+            return 1;
+    }
     return 0;
 }
 
@@ -408,6 +422,19 @@ uint64_t which_pieces_check_king(game_state *s, int king_index)
             continue;
         if (is_pawn(nearest_piece_in_direction))
             ret = ret | set_nth_bit_to(ret, idx, 1);
+    }
+    for (int i = DIR_TOP; i <= DIR_BOTTOM_RIGHT; i++)
+    {
+        idx = get_square_in_direction(king_index, i, 1);
+        if (idx == -1)
+            continue;
+        nearest_piece_in_direction = s->squares[idx];
+        if (nearest_piece_in_direction == BLANK)
+            continue;
+        if (get_player(nearest_piece_in_direction) == player)
+            continue;
+        if (is_king(nearest_piece_in_direction))
+            ret |= set_nth_bit_to(ret, idx, 1);
     }
     return ret;
 }
