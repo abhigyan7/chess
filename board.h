@@ -85,6 +85,36 @@ int get_opponent(int player)
     return 1 - player;
 }
 
+int is_knight(int p)
+{
+    return (p == B_KNIGHT || p == W_KNIGHT);
+}
+
+int is_rook(int p)
+{
+    return (p == B_ROOK || p == W_ROOK);
+}
+
+int is_bishop(int p)
+{
+    return (p == B_BISHOP || p == W_BISHOP);
+}
+
+int is_king(int p)
+{
+    return (p == B_KING || p == W_KING);
+}
+
+int is_queen(int p)
+{
+    return (p == B_QUEEN || p == W_QUEEN);
+}
+
+int is_pawn(int p)
+{
+    return (p == B_PAWN || p == W_PAWN);
+}
+
 // use this when you need the starting state
 const game_state starting_state = {
     {
@@ -263,9 +293,7 @@ int read_state(game_state* state, char* fen_string)
 
     string_index++;
     token = fen_string[string_index];
-    printf("Token: %c\n", token);
     state->turn = (token=='w')? WHITE: BLACK;
-    printf("%d\n", state->turn);
     return 1;
 }
 
