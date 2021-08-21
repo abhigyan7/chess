@@ -45,7 +45,7 @@ enum PIECES {
     BLANK, B_ROOK=8, B_KNIGHT=9, B_BISHOP=10, B_KING=11, B_QUEEN=12, B_PAWN=13
 };
 
-enum TURNS {WHITE=0, BLACK=8};
+enum TURNS {WHITE=0, BLACK=1};
 
 int board_starting_config[] = {
     B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK,
@@ -57,6 +57,63 @@ int board_starting_config[] = {
     W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,  W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,
     W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK
 };
+
+int get_player(int piece)
+{
+    if (piece == BLANK)
+        return -1;
+    return (piece & 8) != WHITE;
+}
+
+int are_two_pieces_same_player(int piece_1, int piece_2)
+{
+    return (get_player(piece_1) == get_player(piece_2));
+}
+
+int are_two_pieces_different_player(int piece_1, int piece_2)
+{
+    return (get_player(piece_1) != get_player(piece_2));
+}
+
+int is_blank(int piece)
+{
+    return piece == BLANK;
+}
+
+int get_opponent(int player)
+{
+    return 1 - player;
+}
+
+int is_knight(int p)
+{
+    return (p == B_KNIGHT || p == W_KNIGHT);
+}
+
+int is_rook(int p)
+{
+    return (p == B_ROOK || p == W_ROOK);
+}
+
+int is_bishop(int p)
+{
+    return (p == B_BISHOP || p == W_BISHOP);
+}
+
+int is_king(int p)
+{
+    return (p == B_KING || p == W_KING);
+}
+
+int is_queen(int p)
+{
+    return (p == B_QUEEN || p == W_QUEEN);
+}
+
+int is_pawn(int p)
+{
+    return (p == B_PAWN || p == W_PAWN);
+}
 
 // use this when you need the starting state
 const game_state starting_state = {
@@ -234,6 +291,9 @@ int read_state(game_state* state, char* fen_string)
         }
     }
 
+    string_index++;
+    token = fen_string[string_index];
+    state->turn = (token=='w')? WHITE: BLACK;
     return 1;
 }
 

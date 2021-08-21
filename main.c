@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <SDL2/SDL.h>
+#include "SDL2/SDL.h"
 #include <SDL2/SDL_image.h>
 
 #include "board.h"
@@ -16,6 +16,7 @@ SDL_Renderer* renderer;
 SDL_Surface* temp_surface;
 SDL_Texture* texture_board;
 SDL_Texture* texture_selected_square;
+SDL_Texture* texture_check_square;
 SDL_Texture* texture_pieces[20];
 
 const int SCREEN_WIDTH = 600;
@@ -73,6 +74,7 @@ int init_graphics()
 {
     texture_board = load_image("assets/board.png");
     texture_selected_square = load_image("assets/selected-square.png");
+    texture_check_square = load_image("assets/check-square.png");
     texture_pieces[B_ROOK]= load_image("assets/black-rook.png");
     texture_pieces[B_PAWN]=load_image( "assets/black-pawn.png");
     texture_pieces[B_KING]=load_image( "assets/black-king.png");
@@ -134,36 +136,16 @@ int pixel_coords_to_board_idx(int x, int y)
     return board_x + 8*board_y;
 }
 
-typedef struct {
-    int from; int to;
-} move;
-
-game_state make_move(game_state s, move m)
-{
-    game_state ret;
-    ret.turn = 8-(s.turn);
-    memcpy(ret.squares, s.squares, sizeof(s.squares));
-    ret.squares[m.to] = s.squares[m.from];
-    ret.squares[m.from] = BLANK;
-    return ret;
-}
-
 void cleanup()
 {
-    //SDL_FreeSurface();
-    //image = NULL;
-
     SDL_DestroyWindow(window);
     window = NULL;
-
     IMG_Quit();
-
     SDL_Quit();
 }
 
-int is_move_legal(game_state s, int from, int to)
+int is_move_legal(uint64_t possible_moves, int to)
 {
-    uint64_t possible_moves = legal_moves(&s, from);
     return get_nth_bit(possible_moves, to);
 }
 
@@ -177,12 +159,16 @@ int main(int argc, char *argv[])
 
     SDL_Event event;
     int mouse_x, mouse_y;
-    int mouse_button;
 
     game_state cur_state = starting_state;
 
-    move m = {-1, -1};
+    uint64_t check_status = 0;
+
+    int from=-1, to=-1;
     int stop_main_loop = 0;
+    uint64_t legal_movesss;
+    int king_index = -1;
+    int king_we_re_searching_for = W_KING;
     while (!stop_main_loop)
     {
         while (SDL_PollEvent(&event))
@@ -191,35 +177,64 @@ int main(int argc, char *argv[])
                 stop_main_loop = 1;
             else if (event.type == SDL_MOUSEBUTTONUP && event.button.button==SDL_BUTTON_LEFT)
             {
+                printf("Mouse event yay\n");
                 mouse_x = event.button.x;
                 mouse_y = event.button.y;
-                if (m.from == -1)
+                if (from == -1)
                 {
-                    m.from = pixel_coords_to_board_idx(mouse_x, mouse_y);
-                    printf("tried to select square %d.\n", m.from);
-                    printf("%d, %d\n", cur_state.squares[m.from], cur_state.turn);
-                    if (!((cur_state.squares[m.from] & 8) == cur_state.turn) || cur_state.squares[m.from] == BLANK)
-                        m.from = -1;
-                    printf("Selected state %d.\n", m.from);
-                } else if (m.to == -1) {
-                    m.to = pixel_coords_to_board_idx(mouse_x, mouse_y);
-                    if (is_move_legal(cur_state, m.from, m.to))
+                    from = pixel_coords_to_board_idx(mouse_x, mouse_y);
+                    printf("tried to select square %d.\n", from);
+                    if (!(get_player(cur_state.squares[from]) == cur_state.turn) || cur_state.squares[from] == BLANK)
+                        from = -1;
+                    legal_movesss = legal_moves(&cur_state, from);
+                    printf("Selected state %d.\n", from);
+                } else if (to == -1) {
+                    to = pixel_coords_to_board_idx(mouse_x, mouse_y);
+                    if (is_move_legal(legal_movesss, to))
                     {
-                        cur_state = make_move(cur_state, m);
-                        printf("Going to state %d.\n", m.to);
+                        cur_state = make_move(cur_state, from, to);
+                        king_we_re_searching_for = (cur_state.turn==BLACK)? B_KING: W_KING;
+                        king_index = find_piece(&cur_state, king_we_re_searching_for);
+                        check_status = which_pieces_check_king(&cur_state, king_index);
+                        if (check_status)
+                            if (is_check_mate(&cur_state, king_index))
+                                stop_main_loop = 1;
+                        printf("Going to state %d.\n", to);
                     }
-                    m.to = -1;  m.from=-1;
+                    to = -1;  from=-1;
                 }
             }
         }
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture_board, NULL, NULL);
         SDL_Rect rect;
-        mouse_button = SDL_GetMouseState(&mouse_x, &mouse_y);
-        if (m.from != -1 && m.to == -1)
+        if (from != -1 && to == -1)
         {
-            rect = board_idx_to_square_rect(m.from);
+            rect = board_idx_to_square_rect(from);
             SDL_RenderCopy(renderer, texture_selected_square, NULL, &rect);
+            for (int z = 0; z < 64; z++)
+            {
+                if (get_nth_bit(legal_movesss, z))
+                {
+                    rect = board_idx_to_square_rect(z);
+                    SDL_RenderCopy(renderer, texture_selected_square, NULL, &rect);
+                }
+            }
+        }
+
+        if (check_status)
+        {
+            rect = board_idx_to_piece_rect(king_index);
+            SDL_RenderCopy(renderer, texture_check_square, NULL, &rect);
+
+            for (int i = 0; i < 64; i++)
+            {
+                if (get_nth_bit(check_status, i) == 0)
+                    continue;
+                rect = board_idx_to_piece_rect(i);
+                SDL_RenderCopy(renderer, texture_check_square, NULL, &rect);
+            }
+
         }
         for (int i = 0; i < 64; i++)
         {
