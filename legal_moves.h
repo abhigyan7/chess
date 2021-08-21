@@ -423,6 +423,7 @@ uint64_t ensure_moves_are_legal(game_state* s, int index, uint64_t moves)
         if (get_nth_bit(moves, j) == 1)
         {
             game_state new_state = make_move_ints(*s, index, j);
+            king_index = find_piece(&new_state, king_we_re_searching_for);
             if (is_king_in_check(&new_state, king_index))
             {
                 ret = set_nth_bit_to(ret, j, 0);
