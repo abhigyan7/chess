@@ -495,7 +495,7 @@ uint64_t ensure_moves_are_legal(game_state* s, int index, uint64_t moves)
     return ret;
 }
 
-uint64_t legal_moves(game_state *s,int index)
+uint64_t pseudo_legal_moves(game_state *s,int index)
 {
     // returns all the legal moves that a piece at index can make
 
@@ -528,9 +528,13 @@ uint64_t legal_moves(game_state *s,int index)
                 break;
         }
     }
+    return possible_moves;
+}
+uint64_t legal_moves(game_state* s, int index)
+{
+    uint64_t possible_moves = pseudo_legal_moves(s, index);
     return ensure_moves_are_legal(s, index, possible_moves);
 }
-
 int is_check_mate(game_state* s, int king_index)
 {
     int player = get_player(s->squares[king_index]);
@@ -547,6 +551,11 @@ int is_check_mate(game_state* s, int king_index)
             return 0;
     }
     return 1;
+}
+
+int is_move_legal(uint64_t possible_moves, int to)
+{
+    return get_nth_bit(possible_moves, to);
 }
 
 #endif
