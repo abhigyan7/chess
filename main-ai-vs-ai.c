@@ -8,6 +8,7 @@
 
 #include "board.h"
 #include "legal_moves.h"
+#include <time.h>
 #include <sys/time.h>
 
 struct timeval start, stop;
@@ -41,7 +42,7 @@ int init_graphics()
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
     {
-        printf("SDL couldnt initialize: %s\n", SDL_GetError());
+        fprintf(stderr,"SDL couldnt initialize: %s\n", SDL_GetError());
         return -1;
     }
 
@@ -49,7 +50,7 @@ int init_graphics()
 
     if (window == NULL)
     {
-        printf("SDL couldnt initialize window: %s\n", SDL_GetError());
+        fprintf(stderr,"SDL couldnt initialize window: %s\n", SDL_GetError());
         return -1;
     }
 
@@ -58,7 +59,7 @@ int init_graphics()
     int img_flags = IMG_INIT_PNG;
     if (!(IMG_Init(img_flags) & img_flags))
     {
-        printf("SDL couldnt initialize! IMG_Error: %s\n", IMG_GetError());
+        fprintf(stderr,"SDL couldnt initialize! IMG_Error: %s\n", IMG_GetError());
         return -1;
     }
 
@@ -71,7 +72,7 @@ SDL_Texture* load_image(char* filename)
     SDL_Surface* temp_surface = IMG_Load(filename);
     if (temp_surface == NULL)
     {
-        printf("Cannot read image %s. %s\n", filename, IMG_GetError());
+        fprintf(stderr,"Cannot read image %s. %s\n", filename, IMG_GetError());
         return NULL;
     }
     target_surface = SDL_CreateTextureFromSurface(renderer, temp_surface);
@@ -159,11 +160,11 @@ void process_click()
     if (from == -1)
     {
         from = pixel_coords_to_board_idx(mouse_x, mouse_y);
-        printf("tried to select square %d.\n", from);
+        fprintf(stderr,"tried to select square %d.\n", from);
         if (!(get_player(cur_state.squares[from]) == cur_state.turn) || cur_state.squares[from] == BLANK)
             from = -1;
         legal_movesss = legal_moves(&cur_state, from);
-        printf("Selected state %d.\n", from);
+        fprintf(stderr,"Selected state %d.\n", from);
     } else if (to == -1) {
         to = pixel_coords_to_board_idx(mouse_x, mouse_y);
         if (is_move_legal(legal_movesss, to))
@@ -175,7 +176,7 @@ void process_click()
             if (check_status)
                 if (is_check_mate(&cur_state, king_index))
                     stop_main_loop = 1;
-            printf("Going to state %d.\n", to);
+            fprintf(stderr,"Going to state %d.\n", to);
         }
         to = -1;  from=-1;
     }
@@ -323,7 +324,7 @@ float eval_comprehensive(game_state *s, int a){
 float minimax_eval(game_state *s, int depth)
 {
     if (depth == 0)
-        return eval_material(s, 0);
+        return eval_comprehensive(s, 0);
 
     float best_val;
     if (s->turn == WHITE)
@@ -347,12 +348,12 @@ float minimax_eval(game_state *s, int depth)
                     float val_of_new_state = eval_function(&new_state, depth-1);
                     if (s->turn == WHITE)
                     {
-                        if (best_val < val_of_new_state)
+                        if (best_val <= val_of_new_state)
                         {
                             best_val = val_of_new_state;
                         }
                     } else {
-                        if (best_val > val_of_new_state)
+                        if (best_val >= val_of_new_state)
                         {
                             best_val = val_of_new_state;
                         }
@@ -364,18 +365,20 @@ float minimax_eval(game_state *s, int depth)
     return best_val;
 }
 
-void choose_best_move(game_state* s, int* from, int* to)
+int choose_best_move(game_state* s, int* from, int* to)
 {
     float best_val;
     int best_to;
     int best_from;
+
+    int ret = -1;
 
     if (s->turn == WHITE)
     {
         eval_function = minimax_eval;
         best_val =  -1000000;
     } else {
-        eval_function = eval_random;
+        eval_function = eval_space_coverage;
         best_val = 1000000;
     }
 
@@ -391,21 +394,23 @@ void choose_best_move(game_state* s, int* from, int* to)
                 {
                     game_state new_state = make_move(*s, i, j);
                     float val_of_new_state = eval_function(&new_state, 3);
-                    //printf("Value for moving %s from %d to %d = %.2f.\n", chars_for_pieces[s->squares[i]], i, j, val_of_new_state);
+                    //fprintf(stderr,"Value for moving %s from %d to %d = %.2f.\n", chars_for_pieces[s->squares[i]], i, j, val_of_new_state);
                     if (s->turn == WHITE)
                     {
-                        if (best_val < val_of_new_state)
+                        if (best_val <= val_of_new_state)
                         {
                             best_val = val_of_new_state;
                             best_from = i;
                             best_to = j;
+                            ret = 1;
                         }
                     } else {
-                        if (best_val > val_of_new_state)
+                        if (best_val >= val_of_new_state)
                         {
                             best_val = val_of_new_state;
                             best_from = i;
                             best_to = j;
+                            ret = 1;
                         }
                     }
                 }
@@ -414,7 +419,24 @@ void choose_best_move(game_state* s, int* from, int* to)
     }
     *from = best_from;
     *to = best_to;
-    printf("Moving %s from %d to %d with a value of %.2f", chars_for_pieces[s->squares[best_from]], best_from, best_to, best_val);
+    fprintf(stderr,"Moving %s from %d to %d with a value of %.2f", chars_for_pieces[s->squares[best_from]], best_from, best_to, best_val);
+    return ret;
+}
+
+char files[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+char ranks[] = {'1', '2', '3', '4', '5', '6', '7', '8'};
+char get_rank_for_board_index(int idx)
+{
+    char ret;
+    ret = ranks[board_index_to_coord_y(idx)];
+    return ret;
+}
+
+char get_file_for_board_index(int idx)
+{
+    char ret;
+    ret = files[board_index_to_coord_x(idx)];
+    return ret;
 }
 
 int main(int argc, char *argv[])
@@ -427,9 +449,13 @@ int main(int argc, char *argv[])
 
     init_graphics();
     init_textures();
+    srand(time(NULL));
+
+    int counter = 0;
 
     while (!stop_main_loop)
     {
+        counter ++;
         while (SDL_PollEvent(&event))
         {
             process_event();
@@ -437,11 +463,24 @@ int main(int argc, char *argv[])
 
         gettimeofday(&start, NULL);
 
+        fprintf(stderr,"Move %d: ", counter);
+
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture_board, NULL, NULL);
         SDL_Rect rect;
 
-        choose_best_move(&cur_state, &from, &to);
+        if(choose_best_move(&cur_state, &from, &to)<0)
+        {
+            fprintf(stderr,"Check mate but with passion!!!\n");
+            stop_main_loop = 1;
+            continue;
+        }
+        char uci_move[] = {'a', 'a', 'a', 'a'};
+        uci_move[0] = get_file_for_board_index(from);
+        uci_move[1] = get_rank_for_board_index(from);
+        uci_move[2] = get_file_for_board_index(to);
+        uci_move[3] = get_rank_for_board_index(to);
+        fprintf(stdout, "%s\n", uci_move);
         cur_state = make_move(cur_state, from, to);
 
         king_we_re_searching_for = (cur_state.turn==BLACK)? B_KING: W_KING;
@@ -450,6 +489,12 @@ int main(int argc, char *argv[])
 
         if (check_status)
         {
+            if (is_check_mate(&cur_state, king_index))
+            {
+                fprintf(stderr,"Check mate!!!\n");
+                stop_main_loop = 1;
+                continue;
+            }
             rect = board_idx_to_piece_rect(king_index);
             SDL_RenderCopy(renderer, texture_check_square, NULL, &rect);
 
@@ -464,7 +509,7 @@ int main(int argc, char *argv[])
         }
         gettimeofday(&stop, NULL);
         secs = (double)(stop.tv_usec - start.tv_usec) / 1000 + (double)(stop.tv_sec - start.tv_sec);
-        printf("time taken %f\n",secs);
+        fprintf(stderr,"time taken %f\n",secs);
         for (int i = 0; i < 64; i++)
         {
             rect = board_idx_to_piece_rect(i);
@@ -472,7 +517,8 @@ int main(int argc, char *argv[])
         }
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(1000);
+        int delay = (counter > 60) ? 3000 : 30;
+        SDL_Delay(delay);
     }
     cleanup();
     return 0;

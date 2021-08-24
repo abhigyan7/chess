@@ -3,18 +3,21 @@
 
 #include <stdint.h>
 
-uint64_t set_nth_bit_to(uint64_t integer, int n, int val)
+inline uint64_t set_nth_bit_to(uint64_t integer, int n, int val)
 {
     integer ^= (-val ^ integer) & (1ULL << n);
     return integer;
 }
 
-int get_nth_bit(uint64_t integer, int n)
+uint64_t set_nth_bit_to(uint64_t integer, int n, int val);
+
+inline int get_nth_bit(uint64_t integer, int n)
 {
     return (integer >> n) & 1U;
 }
+int get_nth_bit(uint64_t integer, int n);
 
-int popcount(uint64_t in)
+inline int popcount(uint64_t in)
 {
     int ret;
 
@@ -24,4 +27,7 @@ int popcount(uint64_t in)
     }
     return ret;
 }
+
+int popcount(uint64_t in);
+
 #endif // BITUTILS_H_

@@ -6,7 +6,6 @@
 #include "bitutils.h"
 #include "board.h"
 
-
 enum DIRECTIONS {
     DIR_TOP, DIR_BOTTOM, DIR_LEFT, DIR_RIGHT,
     DIR_TOP_LEFT, DIR_TOP_RIGHT, DIR_BOTTOM_LEFT, DIR_BOTTOM_RIGHT

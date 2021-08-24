@@ -7,7 +7,6 @@
 #include <SDL2/SDL_image.h>
 
 #include "board.h"
-//#include "moves_generation.h"
 #include "legal_moves.h"
 
 
@@ -21,12 +20,22 @@ SDL_Texture* texture_pieces[20];
 
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 600;
-const int SQUARE_WIDTH = SCREEN_WIDTH/8;
+const int SQUARE_WIDTH = 75;
 
 const int PIECES_TEXTURE_WIDTH = 60;
 const int PIECES_TEXTURE_HEIGHT = 60;
 
-int graphics_init()
+SDL_Event event;
+int mouse_x, mouse_y;
+game_state cur_state = starting_state;
+uint64_t check_status = 0;
+int from=-1, to=-1;
+int stop_main_loop = 0;
+uint64_t legal_movesss;
+int king_index = -1;
+int king_we_re_searching_for = W_KING;
+int init_graphics()
+
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
     {
@@ -58,7 +67,6 @@ SDL_Texture* load_image(char* filename)
 {
     SDL_Texture* target_surface = NULL;
     SDL_Surface* temp_surface = IMG_Load(filename);
-    // target_surface = SDL_ConvertSurface( temp_surface, surface_screen->format, 0 );
     if (temp_surface == NULL)
     {
         printf("Cannot read image %s. %s\n", filename, IMG_GetError());
@@ -70,23 +78,23 @@ SDL_Texture* load_image(char* filename)
     return target_surface;
 }
 
-int init_graphics()
+int init_textures()
 {
     texture_board = load_image("assets/board.png");
-    texture_selected_square = load_image("assets/selected-square.png");
-    texture_check_square = load_image("assets/check-square.png");
-    texture_pieces[B_ROOK]= load_image("assets/black-rook.png");
-    texture_pieces[B_PAWN]=load_image( "assets/black-pawn.png");
-    texture_pieces[B_KING]=load_image( "assets/black-king.png");
-    texture_pieces[B_QUEEN]=load_image( "assets/black-queen.png");
-    texture_pieces[B_BISHOP]=load_image( "assets/black-bishop.png");
-    texture_pieces[B_KNIGHT]=load_image( "assets/black-knight.png");
-    texture_pieces[W_ROOK]=load_image( "assets/white-rook.png");
-    texture_pieces[W_PAWN]=load_image( "assets/white-pawn.png");
-    texture_pieces[W_KING]=load_image( "assets/white-king.png");
-    texture_pieces[W_QUEEN]=load_image( "assets/white-queen.png");
-    texture_pieces[W_BISHOP]=load_image( "assets/white-bishop.png");
-    texture_pieces[W_KNIGHT]=load_image( "assets/white-knight.png");
+    texture_selected_square  = load_image("assets/selected-square.png");
+    texture_check_square     = load_image("assets/check-square.png");
+    texture_pieces[B_ROOK]   = load_image("assets/black-rook.png");
+    texture_pieces[B_PAWN]   = load_image("assets/black-pawn.png");
+    texture_pieces[B_KING]   = load_image("assets/black-king.png");
+    texture_pieces[B_QUEEN]  = load_image("assets/black-queen.png");
+    texture_pieces[B_BISHOP] = load_image("assets/black-bishop.png");
+    texture_pieces[B_KNIGHT] = load_image("assets/black-knight.png");
+    texture_pieces[W_ROOK]   = load_image("assets/white-rook.png");
+    texture_pieces[W_PAWN]   = load_image("assets/white-pawn.png");
+    texture_pieces[W_KING]   = load_image("assets/white-king.png");
+    texture_pieces[W_QUEEN]  = load_image("assets/white-queen.png");
+    texture_pieces[W_BISHOP] = load_image("assets/white-bishop.png");
+    texture_pieces[W_KNIGHT] = load_image("assets/white-knight.png");
     return 0;
 }
 
@@ -144,67 +152,59 @@ void cleanup()
     SDL_Quit();
 }
 
-int is_move_legal(uint64_t possible_moves, int to)
+void process_click()
 {
-    return get_nth_bit(possible_moves, to);
+    if (from == -1)
+    {
+    from = pixel_coords_to_board_idx(mouse_x, mouse_y);
+    printf("tried to select square %d.\n", from);
+    if (!(get_player(cur_state.squares[from]) == cur_state.turn) || cur_state.squares[from] == BLANK)
+        from = -1;
+        legal_movesss = legal_moves(&cur_state, from);
+        printf("Selected state %d.\n", from);
+    } else if (to == -1) {
+        to = pixel_coords_to_board_idx(mouse_x, mouse_y);
+        if (is_move_legal(legal_movesss, to))
+        {
+            cur_state = make_move(cur_state, from, to);
+            king_we_re_searching_for = (cur_state.turn==BLACK)? B_KING: W_KING;
+            king_index = find_piece(&cur_state, king_we_re_searching_for);
+            check_status = which_pieces_check_king(&cur_state, king_index);
+            if (check_status)
+                if (is_check_mate(&cur_state, king_index))
+                    stop_main_loop = 1;
+            printf("Going to state %d.\n", to);
+        }
+        to = -1;  from=-1;
+    }
+}
+
+
+void process_event(){
+    if (event.type == SDL_QUIT)
+        stop_main_loop = 1;
+    else if(event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT)
+    {
+        mouse_x = event.button.x;
+        mouse_y = event.button.y;
+        process_click();
+    }
+
 }
 
 int main(int argc, char *argv[])
 {
 
-    int initc = graphics_init();
-    printf("init: %d\n", initc);
-    int load = init_graphics();
-    printf("Load: %d\n", load);
+    init_graphics();
+    init_textures();
 
-    SDL_Event event;
-    int mouse_x, mouse_y;
-
-    game_state cur_state = starting_state;
-
-    uint64_t check_status = 0;
-
-    int from=-1, to=-1;
-    int stop_main_loop = 0;
-    uint64_t legal_movesss;
-    int king_index = -1;
-    int king_we_re_searching_for = W_KING;
     while (!stop_main_loop)
     {
         while (SDL_PollEvent(&event))
         {
-            if (event.type == SDL_QUIT)
-                stop_main_loop = 1;
-            else if (event.type == SDL_MOUSEBUTTONUP && event.button.button==SDL_BUTTON_LEFT)
-            {
-                printf("Mouse event yay\n");
-                mouse_x = event.button.x;
-                mouse_y = event.button.y;
-                if (from == -1)
-                {
-                    from = pixel_coords_to_board_idx(mouse_x, mouse_y);
-                    printf("tried to select square %d.\n", from);
-                    if (!(get_player(cur_state.squares[from]) == cur_state.turn) || cur_state.squares[from] == BLANK)
-                        from = -1;
-                    legal_movesss = legal_moves(&cur_state, from);
-                    printf("Selected state %d.\n", from);
-                } else if (to == -1) {
-                    to = pixel_coords_to_board_idx(mouse_x, mouse_y);
-                    if (is_move_legal(legal_movesss, to))
-                    {
-                        cur_state = make_move(cur_state, from, to);
-                        king_we_re_searching_for = (cur_state.turn==BLACK)? B_KING: W_KING;
-                        king_index = find_piece(&cur_state, king_we_re_searching_for);
-                        check_status = which_pieces_check_king(&cur_state, king_index);
-                        if (check_status)
-                            if (is_check_mate(&cur_state, king_index))
-                                stop_main_loop = 1;
-                        printf("Going to state %d.\n", to);
-                    }
-                    to = -1;  from=-1;
-                }
-            }
+            process_event();
         }
+
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture_board, NULL, NULL);
         SDL_Rect rect;
