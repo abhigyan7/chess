@@ -189,7 +189,6 @@ void process_event(){
         mouse_y = event.button.y;
         process_click();
     }
-
 }
 
 int main(int argc, char *argv[])

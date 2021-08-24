@@ -192,7 +192,6 @@ void process_event(){
         mouse_y = event.button.y;
         process_click();
     }
-
 }
 
 #define KNIGHT_MOB_VAL 0.875
@@ -378,7 +377,7 @@ int choose_best_move(game_state* s, int* from, int* to)
         eval_function = minimax_eval;
         best_val =  -1000000;
     } else {
-        eval_function = eval_space_coverage;
+        eval_function = minimax_eval;
         best_val = 1000000;
     }
 
@@ -443,8 +442,16 @@ int main(int argc, char *argv[])
 {
     double secs = 0;
 
+    int player= 0;
+    printf("Enter turn, 0 for white, 1 for black: ");
+    scanf(" %d", &player);
 
-// Do stuff  here
+    player = player ? BLACK: WHITE;
+    printf("Player is %d.\n", player);
+
+    SDL_Rect rect;
+
+    // Do stuff  here
 
 
     init_graphics();
@@ -455,37 +462,64 @@ int main(int argc, char *argv[])
 
     while (!stop_main_loop)
     {
-        counter ++;
         while (SDL_PollEvent(&event))
         {
             process_event();
         }
 
-        gettimeofday(&start, NULL);
+        if (from != -1 && to == -1)
+        {
+            rect = board_idx_to_square_rect(from);
+            SDL_RenderCopy(renderer, texture_selected_square, NULL, &rect);
+            for (int z = 0; z < 64; z++)
+            {
+                if (get_nth_bit(legal_movesss, z))
+                {
+                    rect = board_idx_to_square_rect(z);
+                    SDL_RenderCopy(renderer, texture_selected_square, NULL, &rect);
+                }
+            }
+        }
+        for (int i = 0; i < 64; i++)
+        {
+            rect = board_idx_to_piece_rect(i);
+            SDL_RenderCopy(renderer, texture_pieces[cur_state.squares[i]], NULL, &rect);
+        }
 
-        fprintf(stderr,"Move %d: ", counter);
+        SDL_RenderPresent(renderer);
+        //gettimeofday(&start, NULL);
+
 
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture_board, NULL, NULL);
-        SDL_Rect rect;
 
-        if(choose_best_move(&cur_state, &from, &to)<0)
+        if (cur_state.turn != player)
         {
-            fprintf(stderr,"Check mate but with passion!!!\n");
-            stop_main_loop = 1;
-            continue;
+            if(choose_best_move(&cur_state, &from, &to)<0)
+            {
+                fprintf(stderr,"Check mate but with passion!!!\n");
+                stop_main_loop = 1;
+                continue;
+            }
         }
-        char uci_move[] = {'a', 'a', 'a', 'a'};
-        uci_move[0] = get_file_for_board_index(from);
-        uci_move[1] = get_rank_for_board_index(from);
-        uci_move[2] = get_file_for_board_index(to);
-        uci_move[3] = get_rank_for_board_index(to);
-        fprintf(stdout, "%s\n", uci_move);
-        cur_state = make_move(cur_state, from, to);
 
-        king_we_re_searching_for = (cur_state.turn==BLACK)? B_KING: W_KING;
-        king_index = find_piece(&cur_state, king_we_re_searching_for);
-        check_status = which_pieces_check_king(&cur_state, king_index);
+        if (from != -1 && to != -1)
+        {
+            fprintf(stderr,"Move %d: ", counter);
+            char uci_move[] = {'a', 'a', 'a', 'a'};
+            uci_move[0] = get_file_for_board_index(from);
+            uci_move[1] = get_rank_for_board_index(from);
+            uci_move[2] = get_file_for_board_index(to);
+            uci_move[3] = get_rank_for_board_index(to);
+            fprintf(stdout, "%s\n", uci_move);
+            cur_state = make_move(cur_state, from, to);
+
+            counter ++;
+            king_we_re_searching_for = (cur_state.turn==BLACK)? B_KING: W_KING;
+            king_index = find_piece(&cur_state, king_we_re_searching_for);
+            check_status = which_pieces_check_king(&cur_state, king_index);
+            from = -1; to = -1;
+        }
 
         if (check_status)
         {
@@ -505,18 +539,10 @@ int main(int argc, char *argv[])
                 rect = board_idx_to_piece_rect(i);
                 SDL_RenderCopy(renderer, texture_check_square, NULL, &rect);
             }
-
         }
-        gettimeofday(&stop, NULL);
-        secs = (double)(stop.tv_usec - start.tv_usec) / 1000 + (double)(stop.tv_sec - start.tv_sec);
-        fprintf(stderr,"time taken %f\n",secs);
-        for (int i = 0; i < 64; i++)
-        {
-            rect = board_idx_to_piece_rect(i);
-            SDL_RenderCopy(renderer, texture_pieces[cur_state.squares[i]], NULL, &rect);
-        }
-
-        SDL_RenderPresent(renderer);
+        //gettimeofday(&stop, NULL);
+        //secs = (double)(stop.tv_usec - start.tv_usec) / 1000 + (double)(stop.tv_sec - start.tv_sec);
+        //fprintf(stderr,"time taken %f\n",secs);
         int delay = (counter > 60) ? 3000 : 30;
         SDL_Delay(delay);
     }
