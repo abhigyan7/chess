@@ -9,9 +9,9 @@
 #include "board.h"
 #include "legal_moves.h"
 #include "gui.h"
+#include "ai.h"
 
 UIState ui_state;
-
 
 int main(int argc, char *argv[])
 {
@@ -36,8 +36,18 @@ int main(int argc, char *argv[])
         }
 
         render_game(&current_state, &ui_state);
-
         SDL_RenderPresent(ui_state.renderer);
+
+        if (current_state.turn == WHITE && ui_state.player_white == AI)
+        {
+            choose_best_move(&current_state,  &(ui_state.from), &(ui_state.to));
+            process_move(&current_state, &ui_state);
+        }
+        if (current_state.turn == BLACK && ui_state.player_black == AI)
+        {
+            choose_best_move(&current_state,  &(ui_state.from), &(ui_state.to));
+            process_move(&current_state, &ui_state);
+        }
         SDL_Delay(33);
     }
     cleanup(&current_state, &ui_state);
