@@ -138,11 +138,11 @@ float minimax_eval(game_state*s, int depth)
 
     float best_val;
     if (s->turn == WHITE)
-        best_val = -1000000;
+        best_val = -10000000;
     else {
-        best_val = 1000000;
+        best_val = 10000000;
     }
-    int any_moves_found;
+    int any_moves_found = 0;
     for (int i = 0; i < 64; i++)
     {
         if (get_player(s->squares[i]) == s->turn)
@@ -171,8 +171,8 @@ float minimax_eval(game_state*s, int depth)
             }
         }
     }
-    //if (any_moves_found == 0)
-    //    return s->turn ? -10000000 : 10000000;
+    if (any_moves_found == 0)
+        return s->turn ? 1000 : -1000;
     return best_val;
 }
 

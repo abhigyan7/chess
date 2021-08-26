@@ -304,7 +304,7 @@ void render_checkmate(game_state* s, UIState* ui_s, int player)
         board_idx_to_piece_rect(i, &rect);
         SDL_RenderCopy(ui_s->renderer, ui_s->texture_check_square, NULL, &rect);
     }
-    SDL_Texture* screen_texture = (player == WHITE) ? ui_s->texture_black_win : ui_s->texture_white_win;
+    SDL_Texture* screen_texture = (player == W_KING) ? ui_s->texture_black_win : ui_s->texture_white_win;
 
     SDL_RenderCopy(ui_s->renderer, screen_texture, NULL, NULL);
 }
