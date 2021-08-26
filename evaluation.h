@@ -18,17 +18,14 @@ float power(float a,int n){
     return result;
 }
 
-//evaluation function simply returns a float value that corresponds to game_state
-float(*eval_function)(game_state* s, int a);
-
-float eval_random(game_state* s, int a)
+float eval_random(game_state* s)
 {
     float x = (float)rand()/(float)(RAND_MAX/1000);
     return x;
 }
 
 const float Piece_Value[14] = {100.0,60.0,60.0,900.0,500.0,10.0,0.0,0.0,-100.0,-60.0,-60.0,-900.0,-500.0,-10.0};
-float eval_space_coverage(game_state *s, int a){
+float eval_space_coverage(game_state *s){
     float space_covered=0.0;
     float space;
     for(int i=0;i<64;i++){
@@ -42,7 +39,7 @@ float eval_space_coverage(game_state *s, int a){
 }
 
 //only for major pieces like bishop, queen, rook, knight
-float eval_major_pieces_mobility(game_state *s, int a){
+float eval_major_pieces_mobility(game_state *s){
     float mobility=0.0;
     uint64_t possible_moves;
     int count;
@@ -100,7 +97,7 @@ float eval_major_pieces_mobility(game_state *s, int a){
     return mobility;
 }
 
-float eval_material(game_state *s, int a)
+float eval_material(game_state *s)
 {
     float evaluation = 0.0;
     for (int i = 0; i < 64; i++)
@@ -114,19 +111,11 @@ float eval_material(game_state *s, int a)
     return evaluation;
 }
 //main evaluation function
-float eval_comprehensive(game_state *s, int a){
-    float evaluation=0.0;
+float eval_comprehensive(game_state *s){
+    float evaluation=eval_material(s);
     float material=0.0;
-    float mobility=eval_major_pieces_mobility(s, 0);
-    float space_covered=eval_space_coverage(s, 0);
-    for(int i =0;i<64;i++){
-        int piece =s->squares[i];
-        if(piece!=BLANK){
-            //material addition
-            material +=Piece_Value[piece];
-            }
-
-    }
+    float mobility=eval_major_pieces_mobility(s);
+    float space_covered=eval_space_coverage(s);
     evaluation = 0.8*material+0.05*space_covered+1.5*mobility;
     return evaluation;
 }

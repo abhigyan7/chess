@@ -4,10 +4,10 @@
 #include "legal_moves.h"
 #include "evaluation.h"
 
-float minimax_eval(game_state*s, int depth)
+float eval_minimax(game_state*s, int depth)
 {
     if (depth == 0)
-        return eval_comprehensive(s, 0);
+        return eval_comprehensive(s);
 
     float best_val;
     if (s->turn == WHITE)
@@ -27,7 +27,7 @@ float minimax_eval(game_state*s, int depth)
                 if (get_nth_bit(all_moves_from_i, j))
                 {
                     game_state new_state = make_move(s, i, j);
-                    float val_of_new_state = minimax_eval(&new_state, depth-1);
+                    float val_of_new_state = eval_minimax(&new_state, depth-1);
                     if (s->turn == WHITE)
                     {
                         if (best_val <= val_of_new_state)
@@ -59,10 +59,8 @@ int choose_best_move(game_state* s, int* from, int* to)
 
     if (s->turn == WHITE)
     {
-        eval_function = minimax_eval;
         best_val =  -1000000;
     } else {
-        eval_function = minimax_eval;
         best_val = 1000000;
     }
 
@@ -77,7 +75,7 @@ int choose_best_move(game_state* s, int* from, int* to)
                 if (get_nth_bit(all_moves_from_i, j))
                 {
                     game_state new_state = make_move(s, i, j);
-                    float val_of_new_state = eval_function(&new_state, 3);
+                    float val_of_new_state = eval_minimax(&new_state,3);
                     //fprintf(stderr,"Value for moving %s from %d to %d = %.2f.\n", chars_for_pieces[s->squares[i]], i, j, val_of_new_state);
                     if (s->turn == WHITE)
                     {
