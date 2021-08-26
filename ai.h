@@ -98,16 +98,17 @@ float minimax_eval_alpha_beta_pruning(game_state*s, int depth, float alpha, floa
             {
                 best_val = max(best_val, val_of_new_state);
                 if (val_of_new_state >= beta)
-                    break;
+                    goto ABORT;
                 alpha = max(alpha, val_of_new_state);
             } else {
                 best_val = min(best_val, val_of_new_state);
                 if (val_of_new_state <= alpha)
-                    break;
+                    goto ABORT;
                 beta = min(beta, val_of_new_state);
             }
         }
     }
+    ABORT:
     if (any_moves_found == 0)
         return s->turn ? 1000 : -1000;
     return best_val;
@@ -146,7 +147,7 @@ int choose_best_move(game_state* s, int* from, int* to, double* time_taken_for_s
                 if (get_nth_bit(all_moves_from_i, j))
                 {
                     game_state new_state = make_move(s, i, j);
-                    float val_of_new_state = minimax_eval_alpha_beta_pruning(&new_state,3, -1000000, 1000000);
+                    float val_of_new_state = minimax_eval_alpha_beta_pruning(&new_state,SEARCH_DEPTH, -1000000, 1000000);
                     //fprintf(stderr,"Value for moving %s from %d to %d = %.2f.\n", chars_for_pieces[s->squares[i]], i, j, val_of_new_state);
                     if (s->turn == WHITE)
                     {
