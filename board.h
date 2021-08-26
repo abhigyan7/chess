@@ -239,6 +239,42 @@ void print_board_state(game_state *s){
     
 }
 
+char files[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+char ranks[] = {'1', '2', '3', '4', '5', '6', '7', '8'};
+
+int board_index_to_coord_x(int index){
+    // returns the horizontal co-ordinate for the square at index
+    // 0 is left, with the positive axes going right
+    return index %8;
+}
+
+int board_index_to_coord_y(int index){
+    // returns the vertical co-ordinate for the square at index
+    // 0 is bottom, with the positive axes going up
+    return (63-index)/8;
+}
+
+int coord_xy_to_board_index(int x, int y){
+    // returns the index for the square at (x,y)
+    // 0 is top left
+    return (7-y)*8+x;
+}
+
+char get_file_for_board_index(int idx)
+{
+    char ret;
+    ret = files[board_index_to_coord_x(idx)];
+    return ret;
+}
+
+char get_rank_for_board_index(int idx)
+{
+    char ret;
+    ret = ranks[board_index_to_coord_y(idx)];
+    return ret;
+}
+
+
 int read_state(game_state* state, char* fen_string)
 {
     /*
