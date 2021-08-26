@@ -112,11 +112,11 @@ float eval_material(game_state *s)
 }
 //main evaluation function
 float eval_comprehensive(game_state *s){
-    float evaluation=eval_material(s);
-    float material=0.0;
+    float evaluation=0.0;
+    float material=eval_material(s);
     float mobility=eval_major_pieces_mobility(s);
     float space_covered=eval_space_coverage(s);
-    evaluation = 0.8*material+0.05*space_covered+1.5*mobility;
+    evaluation = 0.75*material+0.05*space_covered+0.2*mobility;
     return evaluation;
 }
 
