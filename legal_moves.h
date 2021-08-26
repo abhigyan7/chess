@@ -31,24 +31,6 @@ int pawn_initial_ranks  [] = { 1, 6};
 // and then 0 and 1 for the two directions
 int pawn_capture_vectors[][2] = { {DIR_TOP_LEFT, DIR_TOP_RIGHT}, {DIR_BOTTOM_LEFT, DIR_BOTTOM_RIGHT}};
 
-int board_index_to_coord_x(int index){
-    // returns the horizontal co-ordinate for the square at index
-    // 0 is left, with the positive axes going right
-    return index %8;
-}
-
-int board_index_to_coord_y(int index){
-    // returns the vertical co-ordinate for the square at index
-    // 0 is bottom, with the positive axes going up
-    return (63-index)/8;
-}
-
-int coord_xy_to_board_index(int x, int y){
-    // returns the index for the square at (x,y)
-    // 0 is top left
-    return (7-y)*8+x;
-}
-
 void print_moves(uint64_t moves)
 {
     // prints the moves set in `moves` as an 8x8 grid with
@@ -438,13 +420,13 @@ uint64_t which_pieces_check_king(game_state *s, int king_index)
     return ret;
 }
 
-game_state make_move(game_state s, int from, int to)
+game_state make_move(game_state* s, int from, int to)
 {
     // executes a move and returns the resulting game_state
 
-    game_state ret = s;
-    ret.turn = get_opponent(s.turn);
-    ret.squares[to] = s.squares[from];
+    game_state ret = *s;
+    ret.turn = get_opponent(s->turn);
+    ret.squares[to] = s->squares[from];
     ret.squares[from] = BLANK;
     return ret;
 }
@@ -483,7 +465,7 @@ uint64_t ensure_moves_are_legal(game_state* s, int index, uint64_t moves)
     {
         if (get_nth_bit(moves, j) == 1)
         {
-            game_state new_state = make_move(*s, index, j);
+            game_state new_state = make_move(s, index, j);
             king_index = find_piece(&new_state, king_we_re_searching_for);
             if (is_king_in_check(&new_state, king_index))
             {
@@ -529,7 +511,7 @@ uint64_t pseudo_legal_moves(game_state *s,int index)
     }
     return possible_moves;
 }
-uint64_t legal_moves(game_state* s, int index)
+uint64_t get_legal_moves(game_state* s, int index)
 {
     uint64_t possible_moves = pseudo_legal_moves(s, index);
     return ensure_moves_are_legal(s, index, possible_moves);
@@ -545,7 +527,7 @@ int is_check_mate(game_state* s, int king_index)
             continue;
         if (get_player(s->squares[i]) == opponent)
             continue;
-        uint64_t moves = legal_moves(s, i);
+        uint64_t moves = get_legal_moves(s, i);
         if (moves)
             return 0;
     }

@@ -3,20 +3,12 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "SDL2/SDL.h"
+#include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
 #include "board.h"
 #include "legal_moves.h"
 
-
-SDL_Window* window;
-SDL_Renderer* renderer;
-SDL_Surface* temp_surface;
-SDL_Texture* texture_board;
-SDL_Texture* texture_selected_square;
-SDL_Texture* texture_check_square;
-SDL_Texture* texture_pieces[20];
 
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 600;
@@ -25,17 +17,53 @@ const int SQUARE_WIDTH = 75;
 const int PIECES_TEXTURE_WIDTH = 60;
 const int PIECES_TEXTURE_HEIGHT = 60;
 
-SDL_Event event;
-int mouse_x, mouse_y;
-game_state cur_state = starting_state;
-uint64_t check_status = 0;
-int from=-1, to=-1;
-int stop_main_loop = 0;
-uint64_t legal_movesss;
-int king_index = -1;
-int king_we_re_searching_for = W_KING;
-int init_graphics()
 
+typedef struct
+{
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    SDL_Surface* temp_surface;
+    SDL_Texture* texture_board;
+    SDL_Texture* texture_selected_square;
+    SDL_Texture* texture_check_square;
+    SDL_Texture* texture_check_king;
+    SDL_Texture* texture_legal_move;
+    SDL_Texture* texture_last_moves;
+    SDL_Texture* texture_pieces[20];
+    SDL_Texture* texture_white_win;
+    SDL_Texture* texture_black_win;
+
+    SDL_Event event;
+    int mouse_x;
+    int mouse_y;
+    int from;
+    int to;
+    int last_from;
+    int last_to;
+    int stop_main_loop;
+    int player_black;
+    int player_white;
+    uint64_t legal_moves;
+    uint64_t white_check_status;
+    uint64_t black_check_status;
+
+    int is_check_mate_black;
+    int is_check_mate_white;
+
+} UIState;
+
+UIState ui_state;
+
+void construct_new_ui_state(UIState* s)
+{
+    s->from = -1;
+    s->to = -1;
+    s->stop_main_loop = 0;;
+}
+
+enum { AI, HUMAN };
+
+int init_graphics(UIState* s)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
     {
@@ -43,15 +71,15 @@ int init_graphics()
         return -1;
     }
 
-    window = SDL_CreateWindow("SDL tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    s->window = SDL_CreateWindow("Madness Carl's Son", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 
-    if (window == NULL)
+    if (s->window == NULL)
     {
         printf("SDL couldnt initialize window: %s\n", SDL_GetError());
         return -1;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    s->renderer = SDL_CreateRenderer(s->window, -1, SDL_RENDERER_SOFTWARE);
 
     int img_flags = IMG_INIT_PNG;
     if (!(IMG_Init(img_flags) & img_flags))
@@ -63,7 +91,7 @@ int init_graphics()
     return 0;
 }
 
-SDL_Texture* load_image(char* filename)
+SDL_Texture* load_image(char* filename, UIState* s)
 {
     SDL_Texture* target_surface = NULL;
     SDL_Surface* temp_surface = IMG_Load(filename);
@@ -72,29 +100,34 @@ SDL_Texture* load_image(char* filename)
         printf("Cannot read image %s. %s\n", filename, IMG_GetError());
         return NULL;
     }
-    target_surface = SDL_CreateTextureFromSurface(renderer, temp_surface);
+    target_surface = SDL_CreateTextureFromSurface(s->renderer, temp_surface);
     SDL_SetTextureBlendMode(target_surface, SDL_BLENDMODE_BLEND);
     SDL_FreeSurface(temp_surface);
     return target_surface;
 }
 
-int init_textures()
+int read_assets(UIState* s)
 {
-    texture_board = load_image("assets/board.png");
-    texture_selected_square  = load_image("assets/selected-square.png");
-    texture_check_square     = load_image("assets/check-square.png");
-    texture_pieces[B_ROOK]   = load_image("assets/black-rook.png");
-    texture_pieces[B_PAWN]   = load_image("assets/black-pawn.png");
-    texture_pieces[B_KING]   = load_image("assets/black-king.png");
-    texture_pieces[B_QUEEN]  = load_image("assets/black-queen.png");
-    texture_pieces[B_BISHOP] = load_image("assets/black-bishop.png");
-    texture_pieces[B_KNIGHT] = load_image("assets/black-knight.png");
-    texture_pieces[W_ROOK]   = load_image("assets/white-rook.png");
-    texture_pieces[W_PAWN]   = load_image("assets/white-pawn.png");
-    texture_pieces[W_KING]   = load_image("assets/white-king.png");
-    texture_pieces[W_QUEEN]  = load_image("assets/white-queen.png");
-    texture_pieces[W_BISHOP] = load_image("assets/white-bishop.png");
-    texture_pieces[W_KNIGHT] = load_image("assets/white-knight.png");
+    s->texture_board            = load_image("assets/board.png", s);
+    s->texture_selected_square  = load_image("assets/selected-square.png", s);
+    s->texture_check_square     = load_image("assets/check-square.png", s);
+    s->texture_check_king       = load_image("assets/king-check.png", s);
+    s->texture_legal_move       = load_image("assets/legal-move.png", s);
+    s->texture_last_moves       = load_image("assets/last-move-squares.png", s);
+    s->texture_pieces[B_ROOK]   = load_image("assets/black-rook.png", s);
+    s->texture_pieces[B_PAWN]   = load_image("assets/black-pawn.png", s);
+    s->texture_pieces[B_KING]   = load_image("assets/black-king.png", s);
+    s->texture_pieces[B_QUEEN]  = load_image("assets/black-queen.png", s);
+    s->texture_pieces[B_BISHOP] = load_image("assets/black-bishop.png", s);
+    s->texture_pieces[B_KNIGHT] = load_image("assets/black-knight.png", s);
+    s->texture_pieces[W_ROOK]   = load_image("assets/white-rook.png", s);
+    s->texture_pieces[W_PAWN]   = load_image("assets/white-pawn.png", s);
+    s->texture_pieces[W_KING]   = load_image("assets/white-king.png", s);
+    s->texture_pieces[W_QUEEN]  = load_image("assets/white-queen.png", s);
+    s->texture_pieces[W_BISHOP] = load_image("assets/white-bishop.png", s);
+    s->texture_pieces[W_KNIGHT] = load_image("assets/white-knight.png", s);
+    s->texture_white_win        = load_image("assets/check-mate-white-win.png", s);
+    s->texture_black_win        = load_image("assets/check-mate-black-win.png", s);
     return 0;
 }
 
@@ -108,33 +141,28 @@ int board_idx_to_file(int idx)
     return idx % 8;
 }
 
-
-SDL_Rect board_idx_to_piece_rect(int idx)
+void board_idx_to_piece_rect(int idx, SDL_Rect* srcrect)
 {
 
     int rank = board_idx_to_rank(idx);
     int file = board_idx_to_file(idx);
-    SDL_Rect srcrect;
 
-    srcrect.x = (file) * SQUARE_WIDTH + (SQUARE_WIDTH - PIECES_TEXTURE_WIDTH)/2;
-    srcrect.y = (rank) * SQUARE_WIDTH + (SQUARE_WIDTH - PIECES_TEXTURE_HEIGHT)/2;
-    srcrect.w = PIECES_TEXTURE_WIDTH;
-    srcrect.h = PIECES_TEXTURE_HEIGHT;
-    return srcrect;
+    srcrect->x = (file) * SQUARE_WIDTH + (SQUARE_WIDTH - PIECES_TEXTURE_WIDTH)/2;
+    srcrect->y = (rank) * SQUARE_WIDTH + (SQUARE_WIDTH - PIECES_TEXTURE_HEIGHT)/2;
+    srcrect->w = PIECES_TEXTURE_WIDTH;
+    srcrect->h = PIECES_TEXTURE_HEIGHT;
 }
 
-SDL_Rect board_idx_to_square_rect(int idx)
+void board_idx_to_square_rect(int idx, SDL_Rect* srcrect)
 {
 
     int rank = board_idx_to_rank(idx);
     int file = board_idx_to_file(idx);
-    SDL_Rect srcrect;
 
-    srcrect.x = (file) * SQUARE_WIDTH;
-    srcrect.y = (rank) * SQUARE_WIDTH;
-    srcrect.w = SQUARE_WIDTH;
-    srcrect.h = SQUARE_WIDTH;
-    return srcrect;
+    srcrect->x = (file) * SQUARE_WIDTH;
+    srcrect->y = (rank) * SQUARE_WIDTH;
+    srcrect->w = SQUARE_WIDTH;
+    srcrect->h = SQUARE_WIDTH;
 }
 
 int pixel_coords_to_board_idx(int x, int y)
@@ -144,106 +172,228 @@ int pixel_coords_to_board_idx(int x, int y)
     return board_x + 8*board_y;
 }
 
-void cleanup()
+void cleanup(game_state* s, UIState* ui_s)
 {
-    SDL_DestroyWindow(window);
-    window = NULL;
+    SDL_DestroyWindow(ui_s->window);
+    ui_s->window = NULL;
     IMG_Quit();
     SDL_Quit();
 }
 
-void process_click()
+void update_check_data(game_state* s, UIState* ui_s)
 {
-    if (from == -1)
+
+    int king_index;
+
+    king_index = find_piece(s, W_KING);
+    ui_s->white_check_status = which_pieces_check_king(s, king_index);
+    ui_s->is_check_mate_white = is_check_mate(s, king_index);
+
+    king_index = find_piece(s, B_KING);
+    ui_s->black_check_status = which_pieces_check_king(s, king_index);
+    ui_s->is_check_mate_black = is_check_mate(s, king_index);
+}
+
+void process_move(game_state* s, UIState* ui_s)
+{
+    *s = make_move(s, ui_s->from, ui_s->to);
+
+    update_check_data(s, ui_s);
+
+    ui_s->last_to = ui_s->to;
+    ui_s->last_from = ui_s->from;
+    ui_s->to = -1;
+    ui_s->from = -1;
+}
+
+void process_click(game_state* s, UIState* ui_s)
+{
+    if (ui_s->from == -1)
     {
-    from = pixel_coords_to_board_idx(mouse_x, mouse_y);
-    printf("tried to select square %d.\n", from);
-    if (!(get_player(cur_state.squares[from]) == cur_state.turn) || cur_state.squares[from] == BLANK)
-        from = -1;
-        legal_movesss = legal_moves(&cur_state, from);
-        printf("Selected state %d.\n", from);
-    } else if (to == -1) {
-        to = pixel_coords_to_board_idx(mouse_x, mouse_y);
-        if (is_move_legal(legal_movesss, to))
+        ui_s->from = pixel_coords_to_board_idx(ui_s->mouse_x, ui_s->mouse_y);
+        if (!(get_player(s->squares[ui_s->from]) == s->turn) || s->squares[ui_s->from] == BLANK)
         {
-            cur_state = make_move(cur_state, from, to);
-            king_we_re_searching_for = (cur_state.turn==BLACK)? B_KING: W_KING;
-            king_index = find_piece(&cur_state, king_we_re_searching_for);
-            check_status = which_pieces_check_king(&cur_state, king_index);
-            if (check_status)
-                if (is_check_mate(&cur_state, king_index))
-                    stop_main_loop = 1;
-            printf("Going to state %d.\n", to);
+            ui_s->from = -1;
+            ui_s->to = -1;
         }
-        to = -1;  from=-1;
+        else {
+            ui_s->legal_moves = get_legal_moves(s, ui_s->from);
+        }
+    } else if (ui_s->to == -1) {
+        ui_s->to = pixel_coords_to_board_idx(ui_s->mouse_x,ui_s->mouse_y);
+        if (is_move_legal(ui_s->legal_moves, ui_s->to))
+        {
+            process_move(s, ui_s);
+        } else {
+            ui_s->from = -1;
+            ui_s->to = -1;
+        }
     }
 }
 
-
-void process_event(){
-    if (event.type == SDL_QUIT)
-        stop_main_loop = 1;
-    else if(event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT)
+void process_event(game_state* s, UIState* ui_s){
+    if (ui_s->event.type == SDL_QUIT)
+        ui_s->stop_main_loop = 1;
+    else if(ui_s->event.type == SDL_MOUSEBUTTONUP && ui_s->event.button.button == SDL_BUTTON_LEFT)
     {
-        mouse_x = event.button.x;
-        mouse_y = event.button.y;
-        process_click();
+        ui_s->mouse_x = ui_s->event.button.x;
+        ui_s->mouse_y = ui_s->event.button.y;
+        process_click(s, ui_s);
     }
 }
+
+void render_possible_moves(game_state* s, UIState* ui_s)
+{
+    SDL_Rect rect;
+    board_idx_to_square_rect(ui_s->from, &rect);
+    SDL_RenderCopy(ui_s->renderer, ui_s->texture_selected_square, NULL, &rect);
+    for (int z = 0; z < 64; z++)
+    {
+        if (get_nth_bit(ui_s->legal_moves, z))
+        {
+            board_idx_to_square_rect(z, &rect);
+            SDL_RenderCopy(ui_s->renderer, ui_s->texture_legal_move, NULL, &rect);
+        }
+    }
+}
+
+void render_last_move(game_state* s, UIState* ui_s)
+{
+
+    SDL_Rect rect;
+    board_idx_to_square_rect(ui_s->last_from, &rect);
+    SDL_RenderCopy(ui_s->renderer, ui_s->texture_last_moves, NULL, &rect);
+    board_idx_to_square_rect(ui_s->last_to, &rect);
+    SDL_RenderCopy(ui_s->renderer, ui_s->texture_last_moves, NULL, &rect);
+}
+
+void render_check_status(game_state* s, UIState* ui_s, int player)
+{
+    SDL_Rect rect;
+
+    int king_index = find_piece(s, player);
+    board_idx_to_square_rect(king_index, &rect);
+    uint64_t check_status = player==W_KING ? ui_s->white_check_status : ui_s->black_check_status;
+    SDL_RenderCopy(ui_s->renderer, ui_s->texture_check_king, NULL, &rect);
+    for (int i = 0; i < 64; i++)
+    {
+        if (get_nth_bit(check_status, i) == 0)
+            continue;
+        board_idx_to_square_rect(i, &rect);
+        SDL_RenderCopy(ui_s->renderer, ui_s->texture_check_square, NULL, &rect);
+    }
+}
+
+void render_checkmate(game_state* s, UIState* ui_s, int player)
+{
+
+    SDL_Rect rect;
+
+    int king_index = find_piece(s, player);
+    board_idx_to_piece_rect(king_index, &rect);
+    uint64_t check_status = player==W_KING ? ui_s->white_check_status : ui_s->black_check_status;
+    SDL_RenderCopy(ui_s->renderer, ui_s->texture_check_king, NULL, &rect);
+    for (int i = 0; i < 64; i++)
+    {
+        if (get_nth_bit(check_status, i) == 0)
+            continue;
+        board_idx_to_piece_rect(i, &rect);
+        SDL_RenderCopy(ui_s->renderer, ui_s->texture_check_square, NULL, &rect);
+    }
+    SDL_Texture* screen_texture = (player == WHITE) ? ui_s->texture_black_win : ui_s->texture_white_win;
+
+    SDL_RenderCopy(ui_s->renderer, screen_texture, NULL, NULL);
+}
+
+void render_stalemate(game_state* s, UIState* ui_s)
+{
+    printf("Stalemate!\n");
+}
+
+void render_pieces(game_state* s, UIState* ui_s)
+{
+    SDL_Rect rect;
+    for (int i = 0; i < 64; i++)
+    {
+        board_idx_to_piece_rect(i, &rect);
+        SDL_RenderCopy(ui_s->renderer, ui_s->texture_pieces[s->squares[i]], NULL, &rect);
+    }
+}
+
+void render_game(game_state* s, UIState* ui_s)
+{
+
+    SDL_RenderClear(ui_s->renderer);
+    SDL_RenderCopy(ui_s->renderer, ui_s->texture_board, NULL, NULL);
+
+    render_pieces(s, ui_s);
+
+    if (ui_s->from != -1 && ui_s->to == -1)
+        render_possible_moves(s, ui_s);
+
+    if (ui_s->last_from != -1 && ui_s->last_to != -1)
+        render_last_move(s, ui_s);
+
+    if (ui_s->white_check_status)
+        render_check_status(s, ui_s, W_KING);
+
+    if (ui_s->black_check_status)
+        render_check_status(s, ui_s, B_KING);
+
+    if (ui_s->is_check_mate_white && ui_s->is_check_mate_black)
+        render_stalemate(s, ui_s);
+
+    if (ui_s->is_check_mate_white)
+        render_checkmate(s, ui_s, W_KING);
+
+    if (ui_s->is_check_mate_black)
+        render_checkmate(s, ui_s, B_KING);
+}
+
 
 int main(int argc, char *argv[])
 {
-
-    init_graphics();
-    init_textures();
-
-    while (!stop_main_loop)
+    game_state current_state = starting_state;
+    if (argc > 1)
     {
-        while (SDL_PollEvent(&event))
+        char* fen_string = argv[1];
+        read_state(&current_state, fen_string);
+    }
+
+    char game_mode_selection;
+    printf("Select game mode: \n");
+    printf("    1. Player vs Player[p]: \n");
+    printf("    2. Player vs AI:[a] \n");
+    game_mode_selection = getc(stdin);
+    if (game_mode_selection == 'p')
+    {
+        ui_state.player_black = HUMAN;
+        ui_state.player_white = HUMAN;
+    } else if (game_mode_selection == 'a') {
+        printf("Choose a side: \n");
+        printf("    1. White[w]: \n");
+        printf("    2. Black:[b] \n");
+        game_mode_selection = getc(stdin);
+        ui_state.player_white = game_mode_selection == 'w' ? HUMAN : AI;
+        ui_state.player_black = game_mode_selection == 'w' ? AI : HUMAN;
+    }
+
+    construct_new_ui_state(&ui_state);
+    init_graphics(&ui_state);
+    read_assets(&ui_state);
+
+    while (!(ui_state.stop_main_loop))
+    {
+        while (SDL_PollEvent(&(ui_state.event)))
         {
-            process_event();
+            process_event(&current_state, &ui_state);
         }
 
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture_board, NULL, NULL);
-        SDL_Rect rect;
-        if (from != -1 && to == -1)
-        {
-            rect = board_idx_to_square_rect(from);
-            SDL_RenderCopy(renderer, texture_selected_square, NULL, &rect);
-            for (int z = 0; z < 64; z++)
-            {
-                if (get_nth_bit(legal_movesss, z))
-                {
-                    rect = board_idx_to_square_rect(z);
-                    SDL_RenderCopy(renderer, texture_selected_square, NULL, &rect);
-                }
-            }
-        }
+        render_game(&current_state, &ui_state);
 
-        if (check_status)
-        {
-            rect = board_idx_to_piece_rect(king_index);
-            SDL_RenderCopy(renderer, texture_check_square, NULL, &rect);
-
-            for (int i = 0; i < 64; i++)
-            {
-                if (get_nth_bit(check_status, i) == 0)
-                    continue;
-                rect = board_idx_to_piece_rect(i);
-                SDL_RenderCopy(renderer, texture_check_square, NULL, &rect);
-            }
-
-        }
-        for (int i = 0; i < 64; i++)
-        {
-            rect = board_idx_to_piece_rect(i);
-            SDL_RenderCopy(renderer, texture_pieces[cur_state.squares[i]], NULL, &rect);
-        }
-
-        SDL_RenderPresent(renderer);
+        SDL_RenderPresent(ui_state.renderer);
         SDL_Delay(33);
     }
-    cleanup();
+    cleanup(&current_state, &ui_state);
     return 0;
 }
