@@ -10,6 +10,8 @@
 #define ROOK_MOB_VAL 1.17
 #define QUEEN_MOB_VAL 1.093
 
+#define VALUE_DECAY_FACTOR 0.98
+
 float power(float a,int n){
     float result=1;
     for(int i=1;i<=n;i++){
@@ -154,7 +156,7 @@ float minimax_eval(game_state*s, int depth)
                 if (get_nth_bit(all_moves_from_i, j))
                 {
                     game_state new_state = make_move(s, i, j);
-                    float val_of_new_state = minimax_eval(&new_state, depth-1);
+                    float val_of_new_state = VALUE_DECAY_FACTOR * minimax_eval(&new_state, depth-1);
                     if (s->turn == WHITE)
                     {
                         if (best_val <= val_of_new_state)
