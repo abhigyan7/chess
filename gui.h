@@ -190,11 +190,19 @@ void update_check_data(game_state* s, UIState* ui_s)
     ui_s->is_check_mate_black = is_check_mate(s, king_index);
 }
 
+char uci_move[] = {'a', 'a', 'a', 'a'};
+
 void process_move(game_state* s, UIState* ui_s)
 {
     *s = make_move(s, ui_s->from, ui_s->to);
 
     update_check_data(s, ui_s);
+
+    uci_move[0] = get_file_for_board_index(ui_s->from);
+    uci_move[1] = get_rank_for_board_index(ui_s->from);
+    uci_move[2] = get_file_for_board_index(ui_s->to);
+    uci_move[3] = get_rank_for_board_index(ui_s->to);
+    fprintf(stdout, "%s\n", uci_move);
 
     ui_s->last_to = ui_s->to;
     ui_s->last_from = ui_s->from;
@@ -350,19 +358,19 @@ void select_game_mode(UIState* ui_s)
 {
 
     char game_mode_selection;
-    printf("Select game mode: \n");
-    printf("    1. Player vs Player[p] \n");
-    printf("    2. Player vs AI[a] \n");
+    fprintf(stderr, "Select game mode: \n");
+    fprintf(stderr, "    1. Player vs Player[p] \n");
+    fprintf(stderr, "    2. Player vs AI[a] \n");
     game_mode_selection = getc(stdin);
     if (game_mode_selection == 'p')
     {
         ui_s->player_black = HUMAN;
         ui_s->player_white = HUMAN;
     } else if (game_mode_selection == 'a') {
-        printf("Choose a side: \n");
-        printf("    1. White[w] \n");
-        printf("    2. Black[b] \n");
-        game_mode_selection = getc(stdin);
+        fprintf(stderr, "Choose a side: \n");
+        fprintf(stderr, "    1. White[w] \n");
+        fprintf(stderr, "    2. Black[b] \n");
+        scanf(" %c", &game_mode_selection);
         ui_s->player_white = game_mode_selection == 'w' ? HUMAN : AI;
         ui_s->player_black = game_mode_selection == 'w' ? AI : HUMAN;
     }
