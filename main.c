@@ -10,6 +10,7 @@
 #include "legal_moves.h"
 #include "gui.h"
 #include "ai.h"
+#include "evaluation.h"
 
 UIState ui_state;
 
