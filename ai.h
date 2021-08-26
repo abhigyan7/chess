@@ -7,6 +7,9 @@
 #include "legal_moves.h"
 #include "evaluation.h"
 
+#define VALUE_DECAY_FACTOR 0.98
+#define SEARCH_DEPTH 3
+
 unsigned int n_states_explored = 0;
 
 float eval_minimax(game_state*s, int depth)
@@ -33,7 +36,7 @@ float eval_minimax(game_state*s, int depth)
                 if (get_nth_bit(all_moves_from_i, j))
                 {
                     game_state new_state = make_move(s, i, j);
-                    float val_of_new_state = VALUE_DECAY_FACTOR * minimax_eval(&new_state, depth-1);
+                    float val_of_new_state = VALUE_DECAY_FACTOR * eval_minimax(&new_state, depth-1);
                     if (s->turn == WHITE)
                     {
                         if (best_val <= val_of_new_state)
@@ -58,7 +61,7 @@ float eval_minimax(game_state*s, int depth)
 float minimax_eval_alpha_beta_pruning(game_state*s, int depth)
 {
     if (depth == 0)
-        return eval_comprehensive(s, 0);
+        return eval_comprehensive(s);
 
     float best_val;
     if (s->turn == WHITE)
