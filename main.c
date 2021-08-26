@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
     init_graphics(&ui_state);
     read_assets(&ui_state);
 
+    double search_time;
+
     while (!(ui_state.stop_main_loop))
     {
         while (SDL_PollEvent(&(ui_state.event)))
@@ -40,12 +42,12 @@ int main(int argc, char *argv[])
 
         if (current_state.turn == WHITE && ui_state.player_white == AI)
         {
-            choose_best_move(&current_state,  &(ui_state.from), &(ui_state.to));
+            choose_best_move(&current_state,  &(ui_state.from), &(ui_state.to), &search_time);
             process_move(&current_state, &ui_state);
         }
         if (current_state.turn == BLACK && ui_state.player_black == AI)
         {
-            choose_best_move(&current_state,  &(ui_state.from), &(ui_state.to));
+            choose_best_move(&current_state,  &(ui_state.from), &(ui_state.to), &search_time);
             process_move(&current_state, &ui_state);
         }
         SDL_Delay(33);
