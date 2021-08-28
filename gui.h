@@ -6,6 +6,7 @@
 
 #include "board.h"
 #include "legal_moves.h"
+#include "ai.h"
 
 enum { AI, HUMAN };
 
@@ -48,6 +49,8 @@ typedef struct
     int is_check_mate_black;
     int is_check_mate_white;
 
+    int counter;
+
 } UIState;
 
 void construct_new_ui_state(UIState* s)
@@ -57,6 +60,7 @@ void construct_new_ui_state(UIState* s)
     s->last_from = -1;
     s->last_to = -1;
     s->stop_main_loop = 0;;
+    s->counter = 0;
 }
 
 int init_graphics(UIState* s)
@@ -208,6 +212,11 @@ void process_move(game_state* s, UIState* ui_s)
     ui_s->last_from = ui_s->from;
     ui_s->to = -1;
     ui_s->from = -1;
+    ui_s->counter++;
+
+    if (ui_s->counter > 9)
+        SEARCH_DEPTH = 5;
+
 }
 
 void process_click(game_state* s, UIState* ui_s)

@@ -31,11 +31,17 @@ struct game_state
      *        Which directions are available for castling for both players
      *   3. en passant status etc
      */
-    int squares[64];
-    int turn;
-    int kings_movement[2];
-    int rooks_movement[2][2];
+    char squares[64];
+    char en_passant;
+    uint64_t black_pieces;
+    uint64_t white_pieces;
+    uint8_t turn : 2;
+    uint8_t white_can_castle_0 : 1;
+    uint8_t white_can_castle_1 : 1;
+    uint8_t black_can_castle_0 : 1;
+    uint8_t black_can_castle_1 : 1;
 };
+
 enum MOVEMENT {
     STATIONARY, MOVED
 };
@@ -127,12 +133,14 @@ const game_state starting_state = {
         W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,  W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,
         W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK
     },
+    -1,
+    0,
+    0,
     WHITE,
-    {STATIONARY, STATIONARY},
-    {
-        {STATIONARY, STATIONARY},
-        {STATIONARY, STATIONARY}
-    }
+    1,
+    1,
+    1,
+    1,
 };
 
 
