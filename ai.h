@@ -6,12 +6,54 @@
 #include "board.h"
 #include "legal_moves.h"
 #include "evaluation.h"
+#include "stdlib.h"
 
 #define VALUE_DECAY_FACTOR 0.9
 
 int SEARCH_DEPTH = 4;
 
 unsigned int n_states_explored = 0;
+
+typedef struct {
+    Move move;
+    float value;
+} MoveWithValue;
+
+int compare_two_moves(const void* a, const void* b)
+{
+    const MoveWithValue* mva = (const MoveWithValue*) a;
+    const MoveWithValue* mvb = (const MoveWithValue*) b;
+
+    return (mva->value > mvb->value) - (mva->value < mvb->value);
+
+}
+
+void create_move_value_array_from_move_array(game_state *s, const Move* moves, MoveWithValue* mwv, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        mwv[i].move = moves[i];
+        game_state new = make_move_2(s, moves[i]);
+        mwv[i].value = eval_comprehensive(&new) * ((s->turn == WHITE) ? -1.0 : 1.0);
+    }
+}
+
+void create_move_array_from_move_value_array(const MoveWithValue* mwvs, Move* moves, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        printf("Move %hu, Value %f\n", mwvs[i].move, mwvs[i].value);
+        moves[i] = mwvs[i].move;
+    }
+}
+
+void sort_moves_by_static_eval(game_state* s, Move* moves, int n)
+{
+    MoveWithValue mwvs[n];
+    create_move_value_array_from_move_array(s, moves, mwvs, n);
+    qsort(mwvs, n, sizeof(MoveWithValue), &compare_two_moves);
+    create_move_array_from_move_value_array(mwvs, moves, n);
+}
 
 float eval_minimax(game_state*s, int depth)
 {
@@ -148,7 +190,7 @@ float minimax_eval_alpha_beta_pruning_2(game_state*s, int depth, float alpha, fl
     {
         int from = get_from_bits(moves[i]);
         int to = get_to_bits(moves[i]);
-        game_state new_state = make_move(s, from, to);
+        game_state new_state = make_move_2(s, moves[i]);
         float val_of_new_state = VALUE_DECAY_FACTOR * minimax_eval_alpha_beta_pruning_2(&new_state, depth-1, alpha, beta);
         if (s->turn == WHITE)
         {
@@ -172,7 +214,6 @@ float minimax_eval_alpha_beta_pruning_2(game_state*s, int depth, float alpha, fl
 
 int choose_best_move_2(game_state* s, Move* move, int* from, int* to, double* time_taken_for_search_milliseconds)
 {
-
     struct timeval t1, t2;
     n_states_explored = 0;
 

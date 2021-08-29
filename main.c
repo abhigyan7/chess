@@ -43,15 +43,22 @@ int main(int argc, char *argv[])
         render_game(&current_state, &ui_state);
         SDL_RenderPresent(ui_state.renderer);
 
-        if (current_state.turn == WHITE && ui_state.player_white == AI)
+        if (!(ui_state.is_check_mate_black || ui_state.is_check_mate_white || ui_state.stalemate))
         {
-            choose_best_move_2(&current_state, &(ui_state.move), &(ui_state.from), &(ui_state.to), &search_time);
-            process_move(&current_state, &ui_state);
-        }
-        if (current_state.turn == BLACK && ui_state.player_black == AI)
-        {
-            choose_best_move_2(&current_state, &(ui_state.move), &(ui_state.from), &(ui_state.to), &search_time);
-            process_move(&current_state, &ui_state);
+            if (current_state.turn == WHITE && ui_state.player_white == AI)
+            {
+                int ret = choose_best_move_2(&current_state, &(ui_state.move), &(ui_state.from), &(ui_state.to), &search_time);
+                if (ret == -1)
+                    continue;
+                process_move(&current_state, &ui_state);
+            }
+            if (current_state.turn == BLACK && ui_state.player_black == AI)
+            {
+                int ret = choose_best_move_2(&current_state, &(ui_state.move), &(ui_state.from), &(ui_state.to), &search_time);
+                if (ret == -1)
+                    continue;
+                process_move(&current_state, &ui_state);
+            }
         }
         SDL_Delay(33);
     }
