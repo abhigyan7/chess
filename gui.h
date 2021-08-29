@@ -45,7 +45,9 @@ typedef struct
     uint64_t legal_moves;
     uint64_t white_check_status;
     uint64_t black_check_status;
+    int stalemate;
 
+    Move move;
     int is_check_mate_black;
     int is_check_mate_white;
 
@@ -61,6 +63,9 @@ void construct_new_ui_state(UIState* s)
     s->last_to = -1;
     s->stop_main_loop = 0;;
     s->counter = 0;
+    s->is_check_mate_white = 0;
+    s->is_check_mate_black = 0;
+    s->stalemate = 0;
 }
 
 int init_graphics(UIState* s)
@@ -188,24 +193,28 @@ void update_check_data(game_state* s, UIState* ui_s)
     king_index = find_piece(s, W_KING);
     ui_s->white_check_status = which_pieces_check_king(s, king_index);
     ui_s->is_check_mate_white = is_check_mate(s, king_index);
+    ui_s->stalemate = (!ui_s->white_check_status) && ui_s->is_check_mate_white;
 
     king_index = find_piece(s, B_KING);
     ui_s->black_check_status = which_pieces_check_king(s, king_index);
     ui_s->is_check_mate_black = is_check_mate(s, king_index);
+    ui_s->stalemate = (!ui_s->black_check_status) && ui_s->is_check_mate_black;
 }
 
 char uci_move[] = {'a', 'a', 'a', 'a'};
 
 void process_move(game_state* s, UIState* ui_s)
 {
-    *s = make_move(s, ui_s->from, ui_s->to);
+    int from = get_from_bits(ui_s->move);
+    int to = get_to_bits(ui_s->move);
 
+    *s = make_move_2(s, ui_s->move);
     update_check_data(s, ui_s);
 
-    uci_move[0] = get_file_for_board_index(ui_s->from);
-    uci_move[1] = get_rank_for_board_index(ui_s->from);
-    uci_move[2] = get_file_for_board_index(ui_s->to);
-    uci_move[3] = get_rank_for_board_index(ui_s->to);
+    uci_move[0] = get_file_for_board_index(from);
+    uci_move[1] = get_rank_for_board_index(from);
+    uci_move[2] = get_file_for_board_index(to);
+    uci_move[3] = get_rank_for_board_index(to);
     fprintf(stdout, "%s\n", uci_move);
 
     ui_s->last_to = ui_s->to;
@@ -234,8 +243,25 @@ void process_click(game_state* s, UIState* ui_s)
         }
     } else if (ui_s->to == -1) {
         ui_s->to = pixel_coords_to_board_idx(ui_s->mouse_x,ui_s->mouse_y);
+        Move move = 0;
+        move = set_from_bits(move, ui_s->from);
+        move = set_to_bits(move, ui_s->to);
         if (is_move_legal(ui_s->legal_moves, ui_s->to))
         {
+            if (is_pawn(s->squares[ui_s->from]) &&
+                board_index_to_coord_y(ui_s->from) == pawn_initial_ranks[get_opponent(s->turn)])
+            {
+                uint8_t promotion = 0;
+                fprintf(stderr, "What do you want to promote your pawn to? \n");
+                fprintf(stderr, "[0] QUEEN\n");
+                fprintf(stderr, "[1] ROOK\n");
+                fprintf(stderr, "[2] BISHOP\n");
+                fprintf(stderr, "[3] KNIGHT\n");
+                scanf(" %c", &promotion);
+                promotion = promotion - 48;
+                move = set_promotion_bits(move, promotion);
+            }
+            ui_s->move = move;
             process_move(s, ui_s);
         } else {
             ui_s->from = -1;
@@ -353,7 +379,7 @@ void render_game(game_state* s, UIState* ui_s)
     if (ui_s->black_check_status)
         render_check_status(s, ui_s, B_KING);
 
-    if (ui_s->is_check_mate_white && ui_s->is_check_mate_black)
+    if (ui_s->stalemate)
         render_stalemate(s, ui_s);
 
     if (ui_s->is_check_mate_white)

@@ -45,12 +45,12 @@ int main(int argc, char *argv[])
 
         if (current_state.turn == WHITE && ui_state.player_white == AI)
         {
-            choose_best_move_2(&current_state,  &(ui_state.from), &(ui_state.to), &search_time);
+            choose_best_move_2(&current_state, &(ui_state.move), &(ui_state.from), &(ui_state.to), &search_time);
             process_move(&current_state, &ui_state);
         }
         if (current_state.turn == BLACK && ui_state.player_black == AI)
         {
-            choose_best_move_2(&current_state,  &(ui_state.from), &(ui_state.to), &search_time);
+            choose_best_move_2(&current_state, &(ui_state.move), &(ui_state.from), &(ui_state.to), &search_time);
             process_move(&current_state, &ui_state);
         }
         SDL_Delay(33);

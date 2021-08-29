@@ -7,7 +7,7 @@
 #include "legal_moves.h"
 #include "evaluation.h"
 
-#define VALUE_DECAY_FACTOR 0.98
+#define VALUE_DECAY_FACTOR 0.9
 
 int SEARCH_DEPTH = 4;
 
@@ -137,13 +137,19 @@ float minimax_eval_alpha_beta_pruning_2(game_state*s, int depth, float alpha, fl
     Move moves[256];
     int n_moves = get_legal_moves_as_move_array(s, moves);
     if (n_moves == 0)
-        return s->turn ? 1000 : -1000;
+    {
+        if (is_king_in_check(s, find_piece(s, (s->turn==WHITE)? W_KING : B_KING)))
+            return s->turn ? 1000 : -1000;
+        else {
+            return s->turn ? -500 : 500;
+        }
+    }
     for (int i = 0; i < n_moves; i++)
     {
         int from = get_from_bits(moves[i]);
         int to = get_to_bits(moves[i]);
         game_state new_state = make_move(s, from, to);
-        float val_of_new_state = minimax_eval_alpha_beta_pruning_2(&new_state, depth-1, alpha, beta);
+        float val_of_new_state = VALUE_DECAY_FACTOR * minimax_eval_alpha_beta_pruning_2(&new_state, depth-1, alpha, beta);
         if (s->turn == WHITE)
         {
             best_val = max(best_val, val_of_new_state);
@@ -164,7 +170,7 @@ float minimax_eval_alpha_beta_pruning_2(game_state*s, int depth, float alpha, fl
     return best_val;
 }
 
-int choose_best_move_2(game_state* s, int* from, int* to, double* time_taken_for_search_milliseconds)
+int choose_best_move_2(game_state* s, Move* move, int* from, int* to, double* time_taken_for_search_milliseconds)
 {
 
     struct timeval t1, t2;
@@ -187,6 +193,7 @@ int choose_best_move_2(game_state* s, int* from, int* to, double* time_taken_for
     gettimeofday(&t1, NULL);
 
     Move moves[256];
+    Move best_move;
     int n_moves = get_legal_moves_as_move_array(s, moves);
     for (int i = 0; i < n_moves; i++)
     {
@@ -195,7 +202,7 @@ int choose_best_move_2(game_state* s, int* from, int* to, double* time_taken_for
 
         printf("Move from %d to %d\n", from, to);
 
-        game_state new_state = make_move(s, from, to);
+        game_state new_state = make_move_2(s, moves[i]);
         float val_of_new_state = minimax_eval_alpha_beta_pruning_2(&new_state,SEARCH_DEPTH, -1000000, 1000000);
         //fprintf(stderr,"Value for moving %s from %d to %d = %.2f.\n", chars_for_pieces[s->squares[i]], i, j, val_of_new_state);
         if (s->turn == WHITE)
@@ -203,6 +210,7 @@ int choose_best_move_2(game_state* s, int* from, int* to, double* time_taken_for
             if (best_val <= val_of_new_state)
             {
                 best_val = val_of_new_state;
+                best_move = moves[i];
                 best_from = from;
                 best_to = to;
                 ret = 1;
@@ -211,6 +219,7 @@ int choose_best_move_2(game_state* s, int* from, int* to, double* time_taken_for
             if (best_val >= val_of_new_state)
             {
                 best_val = val_of_new_state;
+                best_move = moves[i];
                 best_from = from;
                 best_to = to;
                 ret = 1;
@@ -234,6 +243,7 @@ int choose_best_move_2(game_state* s, int* from, int* to, double* time_taken_for
 
     *time_taken_for_search_milliseconds = (secs * 1000 + usecs / 1000.0 + 0.5);
     fprintf(stderr, "Explored %u states in %F milliseconds.\n", n_states_explored, *time_taken_for_search_milliseconds);
+    *move = best_move;
     return ret;
 }
 
