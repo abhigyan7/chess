@@ -214,8 +214,8 @@ void process_move(game_state* s, UIState* ui_s)
     ui_s->from = -1;
     ui_s->counter++;
 
-    if (ui_s->counter > 9)
-        SEARCH_DEPTH = 5;
+    //if (ui_s->counter > 9)
+    //    SEARCH_DEPTH = 5;
 
 }
 

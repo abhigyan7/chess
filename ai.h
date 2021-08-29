@@ -9,7 +9,7 @@
 
 #define VALUE_DECAY_FACTOR 0.98
 
-int SEARCH_DEPTH = 3;
+int SEARCH_DEPTH = 4;
 
 unsigned int n_states_explored = 0;
 

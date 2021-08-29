@@ -36,10 +36,7 @@ struct game_state
     uint64_t black_pieces;
     uint64_t white_pieces;
     uint8_t turn : 2;
-    uint8_t white_can_castle_0 : 1;
-    uint8_t white_can_castle_1 : 1;
-    uint8_t black_can_castle_0 : 1;
-    uint8_t black_can_castle_1 : 1;
+    uint8_t castles_possible : 4;
 };
 
 enum MOVEMENT {
@@ -137,10 +134,7 @@ const game_state starting_state = {
     0,
     0,
     WHITE,
-    1,
-    1,
-    1,
-    1,
+    0b1111,
 };
 
 
