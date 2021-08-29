@@ -25,7 +25,6 @@ int compare_two_moves(const void* a, const void* b)
     const MoveWithValue* mvb = (const MoveWithValue*) b;
 
     return (mva->value > mvb->value) - (mva->value < mvb->value);
-
 }
 
 void create_move_value_array_from_move_array(game_state *s, const Move* moves, MoveWithValue* mwv, int n)
@@ -42,7 +41,7 @@ void create_move_array_from_move_value_array(const MoveWithValue* mwvs, Move* mo
 {
     for (int i = 0; i < n; i++)
     {
-        printf("Move %hu, Value %f\n", mwvs[i].move, mwvs[i].value);
+        // printf("Move %hu, Value %f\n", mwvs[i].move, mwvs[i].value);
         moves[i] = mwvs[i].move;
     }
 }
@@ -186,24 +185,24 @@ float minimax_eval_alpha_beta_pruning_2(game_state*s, int depth, float alpha, fl
             return s->turn ? -500 : 500;
         }
     }
+    if (depth > 1)
+        sort_moves_by_static_eval(s, moves, n_moves);
     for (int i = 0; i < n_moves; i++)
     {
-        int from = get_from_bits(moves[i]);
-        int to = get_to_bits(moves[i]);
         game_state new_state = make_move_2(s, moves[i]);
         float val_of_new_state = VALUE_DECAY_FACTOR * minimax_eval_alpha_beta_pruning_2(&new_state, depth-1, alpha, beta);
         if (s->turn == WHITE)
         {
             best_val = max(best_val, val_of_new_state);
             alpha = max(alpha, val_of_new_state);
-            if (val_of_new_state >= beta)
+            if (val_of_new_state > beta)
             {
                 break;
             }
         } else {
             best_val = min(best_val, val_of_new_state);
             beta = min(beta, val_of_new_state);
-            if (val_of_new_state <= alpha)
+            if (val_of_new_state < alpha)
             {
                 break;
             }
@@ -212,7 +211,7 @@ float minimax_eval_alpha_beta_pruning_2(game_state*s, int depth, float alpha, fl
     return best_val;
 }
 
-int choose_best_move_2(game_state* s, Move* move, int* from, int* to, double* time_taken_for_search_milliseconds)
+int choose_best_move_2(game_state* s, Move* move, double* time_taken_for_search_milliseconds)
 {
     struct timeval t1, t2;
     n_states_explored = 0;
@@ -267,8 +266,6 @@ int choose_best_move_2(game_state* s, Move* move, int* from, int* to, double* ti
             }
         }
     }
-    *from = best_from;
-    *to = best_to;
     fprintf(stderr,"Moving %s from %d to %d with a value of %.2f.\n", chars_for_pieces[(int)s->squares[best_from]], best_from, best_to, best_val);
     // ending seach
     gettimeofday(&t2, NULL);

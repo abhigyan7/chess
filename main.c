@@ -47,16 +47,20 @@ int main(int argc, char *argv[])
         {
             if (current_state.turn == WHITE && ui_state.player_white == AI)
             {
-                int ret = choose_best_move_2(&current_state, &(ui_state.move), &(ui_state.from), &(ui_state.to), &search_time);
+                int ret = choose_best_move_2(&current_state, &(ui_state.move), &search_time);
                 if (ret == -1)
                     continue;
+                ui_state.from = get_from_bits(ui_state.move);
+                ui_state.to = get_from_bits(ui_state.move);
                 process_move(&current_state, &ui_state);
             }
             if (current_state.turn == BLACK && ui_state.player_black == AI)
             {
-                int ret = choose_best_move_2(&current_state, &(ui_state.move), &(ui_state.from), &(ui_state.to), &search_time);
+                int ret = choose_best_move_2(&current_state, &(ui_state.move), &search_time);
                 if (ret == -1)
                     continue;
+                ui_state.from = get_from_bits(ui_state.move);
+                ui_state.to = get_from_bits(ui_state.move);
                 process_move(&current_state, &ui_state);
             }
         }
