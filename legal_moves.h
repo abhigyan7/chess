@@ -598,7 +598,6 @@ game_state make_move_2(game_state* s, Move m)
         (abs(board_index_to_coord_y(from) - board_index_to_coord_y(to)) == 2))
     {
         ret.en_passant = get_square_in_direction(from, pawn_move_vectors[s->turn], 1);
-        //printf("En passant at %d\n", ret.en_passant);
     } else {
         ret.en_passant = -1;
     }
@@ -769,13 +768,7 @@ uint64_t get_legal_destinations(game_state* s, int index)
 {
     Move moves[28];
     int n_moves = get_legal_moves_from_one_square_as_move_array(s, index, moves, 0);
-    printf("Moves before filtering: %d\n", n_moves);
-    for (int i = 0; i < n_moves; i++)
-    {
-        printf("TO %d\n", get_to_bits(moves[i]));
-    }
     n_moves = ensure_moves_are_legal(s, moves, n_moves);
-    printf("Moves after filtering: %d\n", n_moves);
     uint64_t ret = 0;
     for (int i = 0; i < n_moves; i++)
     {
@@ -789,7 +782,6 @@ int is_check_mate(game_state* s)
 {
     Move moves[256];
     int n_moves = get_legal_moves_as_move_array(s, moves);
-    printf("Found %d moves.\n", n_moves);
     if (n_moves == 0)
         return 1;
     return 0;
