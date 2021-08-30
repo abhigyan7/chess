@@ -673,7 +673,6 @@ int ensure_moves_are_legal(game_state* s, Move move[], int n_moves)
     // make sure none of the moves cause the player's own king
     // to be in check
 
-
     int king_index = -1;
 
     Move legal_moves[n_moves];
@@ -682,7 +681,7 @@ int ensure_moves_are_legal(game_state* s, Move move[], int n_moves)
     {
         game_state new_state = make_move_2(s, move[i]);
         int king_we_re_searching_for = (s->turn==WHITE)? W_KING: B_KING;
-        king_index = find_piece(s, king_we_re_searching_for);
+        king_index = find_piece(&new_state, king_we_re_searching_for);
         if (!is_king_in_check(&new_state, king_index))
         {
             legal_moves[n_legal_moves] = move[i];
@@ -771,7 +770,13 @@ uint64_t get_legal_destinations(game_state* s, int index)
 {
     Move moves[28];
     int n_moves = get_legal_moves_from_one_square_as_move_array(s, index, moves, 0);
+    printf("Moves before filtering: %d\n", n_moves);
+    for (int i = 0; i < n_moves; i++)
+    {
+        printf("TO %d\n", get_to_bits(moves[i]));
+    }
     n_moves = ensure_moves_are_legal(s, moves, n_moves);
+    printf("Moves after filtering: %d\n", n_moves);
     uint64_t ret = 0;
     for (int i = 0; i < n_moves; i++)
     {

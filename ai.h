@@ -8,7 +8,7 @@
 #include "evaluation.h"
 #include "stdlib.h"
 
-#define VALUE_DECAY_FACTOR 0.9
+#define VALUE_DECAY_FACTOR 0.98
 
 int SEARCH_DEPTH = 4;
 
@@ -84,6 +84,8 @@ float minimax_eval_alpha_beta_pruning(game_state*s, int depth, float alpha, floa
         if (is_king_in_check(s, find_piece(s, (s->turn==WHITE)? W_KING : B_KING)))
             return s->turn ? 1000 : -1000;
         else {
+            // stalemate
+            // a checkmate could be worse, but try to prevent stalemate if possible
             return s->turn ? -500 : 500;
         }
     }
