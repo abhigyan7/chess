@@ -2,6 +2,7 @@
 #define _LEGAL_MOVES_H
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdint.h>
 #include "bitutils.h"
 #include "board.h"
@@ -11,8 +12,18 @@ enum DIRECTIONS {
     DIR_TOP_LEFT, DIR_TOP_RIGHT, DIR_BOTTOM_LEFT, DIR_BOTTOM_RIGHT
 };
 
+char promotion_pieces[][4]  = {
+{W_QUEEN, W_ROOK, W_BISHOP, W_KNIGHT},
+{B_QUEEN, B_ROOK, B_BISHOP, B_KNIGHT}};
 // all the translations for a knight's movements
 const int knight_translations[][2] = {{-1,2},{-2,1},{1,2},{2,1},{-1,-2},{-2,-1},{1,-2},{2,-1}};
+
+// places the kings can go to for castling
+const int king_translations_castle[][2] = {{C1, G1},{C8, G8}};
+
+// places where the corresponding rooks end up at
+const int rook_translations_castle_fr[][2] = {{A1, H1}, {A8, H8}};
+const int rook_translations_castle_to[][2] = {{D1, F1}, {D8, F8}};
 
 // the direction vectors for the directions in DIRECTIONS
 // the indeces for this array are the values in DIRECTIONS
@@ -26,10 +37,65 @@ int pawn_move_vectors   [] = { DIR_TOP, DIR_BOTTOM};
 // the indeces for this array are 0 for WHITE and 1 for BLACK
 int pawn_initial_ranks  [] = { 1, 6};
 
+// the final vertical coordinates that pawns on each side can reach
+// the indeces for this array are 0 for WHITE and 1 for BLACK
+// at these final coordinates, we can promote the pawn
+int pawn_final_ranks [] = { 7, 0 };
+
 // the direction vectors for pawns to capture opponent pieces
 // the indeces for this array are 0 for WHITE and 1 for BLACK
 // and then 0 and 1 for the two directions
 int pawn_capture_vectors[][2] = { {DIR_TOP_LEFT, DIR_TOP_RIGHT}, {DIR_BOTTOM_LEFT, DIR_BOTTOM_RIGHT}};
+
+typedef uint16_t Move;
+const uint16_t TO_BITS   = 0b0000000000111111;
+const uint16_t FROM_BITS = 0b0000111111000000;
+const uint16_t PROM_BITS = 0b1111000000000000;
+
+enum PROMOTIONS {
+PROMOTE_TO_QUEEN,
+PROMOTE_TO_ROOK,
+PROMOTE_TO_BISHOP,
+PROMOTE_TO_KNIGHT
+};
+
+uint16_t promotion_flags[] = {0b0001, 0b0010, 0b0100, 0b1000};
+
+Move set_promotion_bits(Move in, enum PROMOTIONS promote_to)
+{
+    in &= ~PROM_BITS;
+    in |= (promotion_flags[promote_to] & 0b1111) << 12;
+    return in;
+}
+
+int get_promotion_bits(uint32_t in)
+{
+    return (in >> 12) & 0b1111;
+}
+
+uint32_t set_from_bits(uint32_t in, uint32_t from)
+{
+    in &= ~FROM_BITS;
+    in |= (from & TO_BITS) << 6;
+    return in;
+}
+
+uint32_t set_to_bits(uint32_t in, uint32_t to)
+{
+    in &= ~TO_BITS;
+    in |= (to & TO_BITS);
+    return in;
+}
+
+int get_from_bits(uint32_t in)
+{
+    return (in >> 6) & 0b111111;
+}
+
+int get_to_bits(uint32_t in)
+{
+    return in & 0b111111;
+}
 
 void print_moves(uint64_t moves)
 {
@@ -111,6 +177,22 @@ uint64_t fill_legal_squares_in_direction(game_state *s, int direction, int index
             // but can't go any beyond
             break;
         }
+    }
+    return ret;
+}
+
+int get_last_square_in_direction(game_state* s, int direction, int index)
+{
+    int ret = 0;
+    int n = 1;
+    while (1) {
+        int position = get_square_in_direction(index, direction, n);
+        n++;
+        if (position == -1)
+            break;
+        ret = position;
+        if (!(s->squares[position] == BLANK))
+            break;
     }
     return ret;
 }
@@ -220,6 +302,34 @@ uint64_t legal_move_pawn(game_state *s,int index){
     return possible_moves;
 }
 
+int legal_move_pawn_expand_promotions(game_state* s, int index, int dest, Move* moves,int n_moves)
+{
+    for (int i = PROMOTE_TO_QUEEN; i <= PROMOTE_TO_KNIGHT; i++)
+    {
+        moves[n_moves] = 0;
+        moves[n_moves] = set_from_bits(moves[n_moves], index);
+        moves[n_moves] = set_to_bits(moves[n_moves], dest);
+        moves[n_moves] = set_promotion_bits(moves[n_moves], i);
+        n_moves++;
+    }
+    return n_moves;
+}
+
+uint64_t legal_move_pawn_enpassant(game_state* s, int index)
+{
+    uint64_t possible_moves = 0x0;
+    int position;
+    for (int i = 0; i < 2; i++)
+    {
+        position = get_square_in_direction(index, pawn_capture_vectors[s->turn][i], 1);
+        if (position == -1)
+            continue;
+        if (s->en_passant == position)
+            return set_nth_bit_to(possible_moves, position, 1);
+    }
+    return possible_moves;
+}
+
 uint64_t legal_move_king(game_state *s,int index){
 
     // returns the legal moves for a king at square `index`
@@ -239,6 +349,41 @@ uint64_t legal_move_king(game_state *s,int index){
             possible_moves |= set_nth_bit_to(possible_moves, position, 1);
     }
     return possible_moves;
+}
+
+uint8_t get_castle_status_for_player(uint8_t castle_status, int player)
+{
+    uint8_t shift_amount = (player==WHITE) ? 0:2;
+    return (castle_status >> shift_amount) & 0b11;
+}
+
+uint64_t legal_move_king_castle(game_state* s, int index)
+{
+    uint64_t possible_moves = 0x0;
+    int player = s->turn;
+    char own_rook = (s->turn == WHITE) ? W_ROOK : B_ROOK;
+
+    // queenside castle
+    if (s->squares[get_last_square_in_direction(s, DIR_LEFT, index)] == own_rook)
+    {
+        uint8_t castle_status_for_player = get_castle_status_for_player(s->castles_possible, player);
+        if(get_nth_bit(castle_status_for_player, 0))
+        {
+            possible_moves = set_nth_bit_to(possible_moves, king_translations_castle[player==BLACK][0], 1);
+        }
+    }
+
+    // kingside castle
+    if (s->squares[get_last_square_in_direction(s, DIR_RIGHT, index)] == own_rook)
+    {
+        uint8_t castle_status_for_player = get_castle_status_for_player(s->castles_possible, player);
+        if(get_nth_bit(castle_status_for_player, 1))
+        {
+            possible_moves = set_nth_bit_to(possible_moves, king_translations_castle[player==BLACK][1], 1);
+        }
+    }
+    return possible_moves;
+
 }
 
 int get_square_at_end_of_direction(game_state *s, int direction, int index)
@@ -420,60 +565,132 @@ uint64_t which_pieces_check_king(game_state *s, int king_index)
     return ret;
 }
 
-game_state make_move(game_state* s, int from, int to)
+void set_flags_new_state(game_state* new)
+{
+    new->white_pieces = 0;
+    new->black_pieces = 0;
+    for (int i = 0; i < 64; i++)
+    {
+        if (get_player(new->squares[i]) == BLACK)
+            new->black_pieces = set_nth_bit_to(new->black_pieces, i, 1);
+        if (get_player(new->squares[i]) == WHITE)
+            new->white_pieces = set_nth_bit_to(new->white_pieces, i, 1);
+    }
+}
+
+game_state make_move_2(game_state* s, Move m)
 {
     // executes a move and returns the resulting game_state
 
     game_state ret = *s;
     ret.turn = get_opponent(s->turn);
+    int from = get_from_bits(m);
+    int to = get_to_bits(m);
+    int promotions = get_promotion_bits(m);
+
+    if (is_pawn(s->squares[from]) && to == s->en_passant)
+    {
+        int captured_pawn_index = get_square_in_direction(to, pawn_move_vectors[get_opponent(s->turn)], 1);
+        ret.squares[captured_pawn_index] = BLANK;
+        ret.en_passant = -1;
+    }
+    if (is_pawn(s->squares[from]) && pawn_initial_ranks[get_player(s->squares[from])] == board_index_to_coord_y(from) &&
+        (abs(board_index_to_coord_y(from) - board_index_to_coord_y(to)) == 2))
+    {
+        ret.en_passant = get_square_in_direction(from, pawn_move_vectors[s->turn], 1);
+        //printf("En passant at %d\n", ret.en_passant);
+    } else {
+        ret.en_passant = -1;
+    }
+
+    if (is_king(s->squares[from]))
+    {
+        uint8_t castles_possible = get_castle_status_for_player(s->castles_possible, s->turn);
+        char own_rook = (s->turn == WHITE) ? W_ROOK : B_ROOK;
+        if (to == king_translations_castle[s->turn==BLACK][0]
+            && get_nth_bit(castles_possible, 0)
+            && s->squares[get_last_square_in_direction(s, DIR_LEFT, from)] == own_rook)
+        {
+            ret.squares[rook_translations_castle_to[s->turn==BLACK][0]] = ret.squares[rook_translations_castle_fr[s->turn==BLACK][0]];
+            ret.squares[rook_translations_castle_fr[s->turn==BLACK][0]] = BLANK;
+        }
+        if (to == king_translations_castle[s->turn==BLACK][1]
+            && get_nth_bit(castles_possible, 1)
+            && s->squares[get_last_square_in_direction(s, DIR_RIGHT, from)] == own_rook)
+        {
+            ret.squares[rook_translations_castle_to[s->turn==BLACK][1]] = ret.squares[rook_translations_castle_fr[s->turn==BLACK][1]];
+            ret.squares[rook_translations_castle_fr[s->turn==BLACK][1]] = BLANK;
+        }
+        uint8_t reset_mask = (s->turn == WHITE) ? 0b1100 : 0b0011;
+        ret.castles_possible = s->castles_possible & reset_mask;
+    }
+    if (is_rook(s->squares[from]))
+    {
+        uint8_t reset_mask;
+        if (from == rook_translations_castle_fr[s->turn==BLACK][0])
+        {
+            reset_mask = (s->turn==WHITE) ? 0b1110 : 0b1011;
+        } else if (from == rook_translations_castle_fr[s->turn==BLACK][1]) {
+
+            reset_mask = (s->turn==WHITE) ? 0b1101 : 0b0111;
+        }
+        ret.castles_possible = ret.castles_possible & reset_mask;
+    }
     ret.squares[to] = s->squares[from];
     ret.squares[from] = BLANK;
+    if (promotions)
+    {
+        char what_to_promote_to = LOG2(promotions);
+
+        what_to_promote_to = promotion_pieces[s->turn==BLACK][(int)what_to_promote_to];
+
+        ret.squares[to] = what_to_promote_to;
+    }
+    set_flags_new_state(&ret);
     return ret;
 }
-
 int find_piece(game_state* s, int piece)
 {
 
     // finds the piece `piece` in the board
     // and returns its location's index
 
-    int index = -1;
-    for (int i = 0; i < 64; i++)
+    char player = get_player(piece);
+    uint64_t search_area = (player == WHITE) ? s->white_pieces : s->black_pieces;
+    int index;
+    while(search_area > 0)
     {
-        if (s->squares[i] == piece)
-        {
-            index = i;
-            break;
-        }
-
+        index = pop_next_index(&search_area);
+        if (s->squares[index] == piece)
+            return index;
     }
-    return index;
+    return -1;
 }
 
-uint64_t ensure_moves_are_legal(game_state* s, int index, uint64_t moves)
+int ensure_moves_are_legal(game_state* s, Move move[], int n_moves)
 {
     // make sure none of the moves cause the player's own king
     // to be in check
 
-    uint64_t ret = moves;
-
     int king_index = -1;
-    int king_we_re_searching_for = (s->turn==BLACK)? B_KING: W_KING;
-    king_index = find_piece(s, king_we_re_searching_for);
 
-    for (int j = 0; j < 64; j++)
+    Move legal_moves[n_moves];
+    int n_legal_moves = 0;
+    for (int i = 0; i < n_moves; i++)
     {
-        if (get_nth_bit(moves, j) == 1)
+        game_state new_state = make_move_2(s, move[i]);
+        int king_we_re_searching_for = (s->turn==WHITE)? W_KING: B_KING;
+        king_index = find_piece(&new_state, king_we_re_searching_for);
+        if (!is_king_in_check(&new_state, king_index))
         {
-            game_state new_state = make_move(s, index, j);
-            king_index = find_piece(&new_state, king_we_re_searching_for);
-            if (is_king_in_check(&new_state, king_index))
-            {
-                ret = set_nth_bit_to(ret, j, 0);
-            }
+            legal_moves[n_legal_moves] = move[i];
+            n_legal_moves++;
         }
     }
-    return ret;
+
+    memcpy(move, legal_moves, n_legal_moves*sizeof(Move));
+
+    return n_legal_moves;
 }
 
 uint64_t pseudo_legal_moves(game_state *s,int index)
@@ -498,6 +715,7 @@ uint64_t pseudo_legal_moves(game_state *s,int index)
             case W_KING:
             case B_KING:
                 possible_moves =legal_move_king(s,index);
+                possible_moves |= legal_move_king_castle(s, index);
                 break;
             case W_QUEEN:
             case B_QUEEN:
@@ -506,32 +724,75 @@ uint64_t pseudo_legal_moves(game_state *s,int index)
             case W_PAWN:
             case B_PAWN:
                 possible_moves =legal_move_pawn(s,index);
+                possible_moves |= legal_move_pawn_enpassant(s, index);
                 break;
         }
     }
     return possible_moves;
 }
-uint64_t get_legal_moves(game_state* s, int index)
-{
-    uint64_t possible_moves = pseudo_legal_moves(s, index);
-    return ensure_moves_are_legal(s, index, possible_moves);
-}
-int is_check_mate(game_state* s, int king_index)
-{
-    int player = get_player(s->squares[king_index]);
-    int opponent = get_opponent(player);
 
-    for (int i = 0; i < 64; i++)
+int get_legal_moves_from_one_square_as_move_array(game_state* s, int index, Move moves[], int counter)
+{
+    uint64_t legal_moves_bitfield = pseudo_legal_moves(s, index);
+    int j;
+    while(legal_moves_bitfield)
     {
-        if (s->squares[i] == BLANK)
-            continue;
-        if (get_player(s->squares[i]) == opponent)
-            continue;
-        uint64_t moves = get_legal_moves(s, i);
-        if (moves)
-            return 0;
+        j = pop_next_index(&legal_moves_bitfield);
+        if (is_pawn(s->squares[index]) && board_index_to_coord_y(index) == pawn_initial_ranks[get_opponent(s->turn)])
+        {
+            counter = legal_move_pawn_expand_promotions(s, index, j, moves, counter);
+        } else
+        {
+            moves[counter] = 0;
+            moves[counter] = set_from_bits(moves[counter], index);
+            moves[counter] = set_to_bits(moves[counter], j);
+            counter++;
+        }
     }
-    return 1;
+    return counter;
+}
+
+int get_legal_moves_as_move_array(game_state* s, Move moves[])
+{
+    int counter = 0, i;
+    uint64_t search_area = (s->turn == WHITE)? s->white_pieces : s->black_pieces;
+    while (search_area > 0)
+    {
+        i = pop_next_index(&search_area);
+        counter = get_legal_moves_from_one_square_as_move_array(s, i, moves, counter);
+    }
+    counter = ensure_moves_are_legal(s, moves, counter);
+    return counter;
+}
+
+uint64_t get_legal_destinations(game_state* s, int index)
+{
+    Move moves[28];
+    int n_moves = get_legal_moves_from_one_square_as_move_array(s, index, moves, 0);
+    printf("Moves before filtering: %d\n", n_moves);
+    for (int i = 0; i < n_moves; i++)
+    {
+        printf("TO %d\n", get_to_bits(moves[i]));
+    }
+    n_moves = ensure_moves_are_legal(s, moves, n_moves);
+    printf("Moves after filtering: %d\n", n_moves);
+    uint64_t ret = 0;
+    for (int i = 0; i < n_moves; i++)
+    {
+        int to_bits = get_to_bits(moves[i]);
+        ret = set_nth_bit_to(ret, to_bits, 1);
+    }
+    return ret;
+}
+
+int is_check_mate(game_state* s)
+{
+    Move moves[256];
+    int n_moves = get_legal_moves_as_move_array(s, moves);
+    printf("Found %d moves.\n", n_moves);
+    if (n_moves == 0)
+        return 1;
+    return 0;
 }
 
 int is_move_legal(uint64_t possible_moves, int to)

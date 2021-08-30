@@ -23,6 +23,8 @@ int main(int argc, char *argv[])
         read_state(&current_state, fen_string);
     }
 
+    set_flags_new_state(&current_state);
+
     select_game_mode(&ui_state);
 
     construct_new_ui_state(&ui_state);
@@ -41,15 +43,26 @@ int main(int argc, char *argv[])
         render_game(&current_state, &ui_state);
         SDL_RenderPresent(ui_state.renderer);
 
-        if (current_state.turn == WHITE && ui_state.player_white == AI)
+        if (!(ui_state.is_check_mate_black || ui_state.is_check_mate_white || ui_state.stalemate))
         {
-            choose_best_move(&current_state,  &(ui_state.from), &(ui_state.to), &search_time);
-            process_move(&current_state, &ui_state);
-        }
-        if (current_state.turn == BLACK && ui_state.player_black == AI)
-        {
-            choose_best_move(&current_state,  &(ui_state.from), &(ui_state.to), &search_time);
-            process_move(&current_state, &ui_state);
+            if (current_state.turn == WHITE && ui_state.player_white == AI)
+            {
+                int ret = choose_best_move(&current_state, &(ui_state.move), &search_time);
+                if (ret == -1)
+                    continue;
+                ui_state.from = get_from_bits(ui_state.move);
+                ui_state.to = get_from_bits(ui_state.move);
+                process_move(&current_state, &ui_state);
+            }
+            if (current_state.turn == BLACK && ui_state.player_black == AI)
+            {
+                int ret = choose_best_move(&current_state, &(ui_state.move), &search_time);
+                if (ret == -1)
+                    continue;
+                ui_state.from = get_from_bits(ui_state.move);
+                ui_state.to = get_from_bits(ui_state.move);
+                process_move(&current_state, &ui_state);
+            }
         }
         SDL_Delay(33);
     }

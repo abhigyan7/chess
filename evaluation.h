@@ -103,10 +103,8 @@ float eval_material(game_state *s)
     for (int i = 0; i < 64; i++)
     {
         int piece =s->squares[i];
-        if(piece!=BLANK){
             //material addition
             evaluation +=Piece_Value[piece];
-        }
     }
     return evaluation;
 }

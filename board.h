@@ -31,11 +31,14 @@ struct game_state
      *        Which directions are available for castling for both players
      *   3. en passant status etc
      */
-    int squares[64];
-    int turn;
-    int kings_movement[2];
-    int rooks_movement[2][2];
+    char squares[64];
+    char en_passant;
+    uint64_t black_pieces;
+    uint64_t white_pieces;
+    uint8_t turn : 2;
+    uint8_t castles_possible : 4;
 };
+
 enum MOVEMENT {
     STATIONARY, MOVED
 };
@@ -127,12 +130,11 @@ const game_state starting_state = {
         W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,  W_PAWN, W_PAWN,   W_PAWN,   W_PAWN,
         W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK
     },
+    -1,
+    0,
+    0,
     WHITE,
-    {STATIONARY, STATIONARY},
-    {
-        {STATIONARY, STATIONARY},
-        {STATIONARY, STATIONARY}
-    }
+    0b1111,
 };
 
 
@@ -160,6 +162,7 @@ enum PLACES {
 char* test_fenstring_1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 char* test_fenstring_2 = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
 char* test_fenstring_3 = "r3kbnr/pp1Nppp1/n1p5/1B5p/3Pp3/2P5/PP3PPP/RNB1K2R w KQkq - 0 10";
+char* test_fenstring_4 = "r3kbnr/pp1Nppp1/n1p5/1B5p/3Pp3/2P5/PP3PPP/RNB1K2R b KQkq - 0 10";
 
 /*
  * Universal code points for chess pieces

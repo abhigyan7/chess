@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define LOG2(X) ((unsigned) (8*sizeof (uint64_t) - __builtin_clzll((X)) - 1))
+
 inline uint64_t set_nth_bit_to(uint64_t integer, int n, int val)
 {
     integer ^= (-val ^ integer) & (1ULL << n);
@@ -30,4 +32,11 @@ inline int popcount(uint64_t in)
 
 int popcount(uint64_t in);
 
+int pop_next_index(uint64_t* in);
+inline int pop_next_index(uint64_t* in)
+{
+    int ret = LOG2(*in);
+    *in = set_nth_bit_to(*in, ret, 0);
+    return ret;
+}
 #endif // BITUTILS_H_
