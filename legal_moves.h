@@ -19,11 +19,11 @@ char promotion_pieces[][4]  = {
 const int knight_translations[][2] = {{-1,2},{-2,1},{1,2},{2,1},{-1,-2},{-2,-1},{1,-2},{2,-1}};
 
 // places the kings can go to for castling
-const int king_translations_castle[][2] = {{57, 62},{1, 6}};
+const int king_translations_castle[][2] = {{C1, G1},{C8, G8}};
 
-// places where the corresponding tooks end up at
-const int rook_translations_castle_fr[][2] = {{56, 63}, {0, 7}};
-const int rook_translations_castle_to[][2] = {{58, 61}, {2, 5}};
+// places where the corresponding rooks end up at
+const int rook_translations_castle_fr[][2] = {{A1, H1}, {A8, H8}};
+const int rook_translations_castle_to[][2] = {{D1, F1}, {D8, F8}};
 
 // the direction vectors for the directions in DIRECTIONS
 // the indeces for this array are the values in DIRECTIONS
@@ -50,7 +50,6 @@ int pawn_capture_vectors[][2] = { {DIR_TOP_LEFT, DIR_TOP_RIGHT}, {DIR_BOTTOM_LEF
 typedef uint16_t Move;
 const uint16_t TO_BITS   = 0b0000000000111111;
 const uint16_t FROM_BITS = 0b0000111111000000;
-const uint16_t FLAG_BITS = 0b1111000000000000;
 const uint16_t PROM_BITS = 0b1111000000000000;
 
 enum PROMOTIONS {
@@ -62,7 +61,7 @@ PROMOTE_TO_KNIGHT
 
 uint16_t promotion_flags[] = {0b0001, 0b0010, 0b0100, 0b1000};
 
-uint32_t set_promotion_bits(uint32_t in, enum PROMOTIONS promote_to)
+Move set_promotion_bits(Move in, enum PROMOTIONS promote_to)
 {
     in &= ~PROM_BITS;
     in |= (promotion_flags[promote_to] & 0b1111) << 12;
